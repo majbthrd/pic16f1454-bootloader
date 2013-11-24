@@ -1,0 +1,25 @@
+--- /media/USB Disk/usb_device.c	2013-06-17 12:40:12.000000000 -0700
++++ usb_device.c	2013-11-24 15:42:17.197947786 -0700
+@@ -363,7 +363,7 @@
+     USB_USER_CONFIG_DESCRIPTOR_INCLUDE;
+ #endif
+ 
+-extern ROM BYTE *ROM USB_SD_Ptr[];
++extern const BYTE const **USB_SD_Ptr;
+ 
+ /** DECLARATIONS ***************************************************/
+ #if defined(__18CXX)
+@@ -2213,11 +2213,11 @@
+         {
+             case USB_DESCRIPTOR_DEVICE:
+                 #if !defined(USB_USER_DEVICE_DESCRIPTOR)
+-                    inPipes[0].pSrc.bRom = (ROM BYTE*)&device_dsc;
++                    inPipes[0].pSrc.bRom = (ROM BYTE*)pnt_device_dsc;
+                 #else
+                     inPipes[0].pSrc.bRom = (ROM BYTE*)USB_USER_DEVICE_DESCRIPTOR;
+                 #endif
+-                inPipes[0].wCount.Val = sizeof(device_dsc);
++                inPipes[0].wCount.Val = sizeof(USB_DEVICE_DESCRIPTOR);
+                 break;
+             case USB_DESCRIPTOR_CONFIGURATION:
+                 #if !defined(USB_USER_CONFIG_DESCRIPTOR)
