@@ -72,9 +72,6 @@ static BOOL msTick = FALSE;
 extern BYTE usercode(BYTE) @ 0x1000;
 #endif
 
-/* centralization of delay code used in USB callbacks */
-static void do_delay(WORD delay_count);
-
 void interrupt ISRCode()
 {
     /*
@@ -372,53 +369,6 @@ int main(void)
     }
 }
 
-// ******************************************************************************************************
-// ************** USB Callback Functions ****************************************************************
-// ******************************************************************************************************
-
-void USBCBSendResume(void)
-{
-    //First verify that the host has armed us to perform remote wakeup.
-    //It does this by sending a SET_FEATURE request to enable remote wakeup,
-    //usually just before the host goes to standby mode (note: it will only
-    //send this SET_FEATURE request if the configuration descriptor declares
-    //the device as remote wakeup capable, AND, if the feature is enabled
-    //on the host (ex: on Windows based hosts, in the device manager 
-    //properties page for the USB device, power management tab, the 
-    //"Allow this device to bring the computer out of standby." checkbox 
-    //should be checked).
-    if(USBGetRemoteWakeupStatus() == TRUE) 
-    {
-        //Verify that the USB bus is in fact suspended, before we send
-        //remote wakeup signalling.
-        if(USBIsBusSuspended() == TRUE)
-        {
-            USBMaskInterrupts();
-            
-            //Clock switch to settings consistent with normal USB operation.
-            USBSuspendControl = 0; 
-            USBBusIsSuspended = FALSE;  //So we don't execute this code again, 
-                                        //until a new suspend condition is detected.
-
-            //Section 7.1.7.7 of the USB 2.0 specifications indicates a USB
-            //device must continuously see 5ms+ of idle on the bus, before it sends
-            //remote wakeup signalling.  One way to be certain that this parameter
-            //gets met, is to add a 2ms+ blocking delay here (2ms plus at 
-            //least 3ms from bus idle to USBIsBusSuspended() == TRUE, yeilds
-            //5ms+ total delay since start of idle).
-            do_delay(3600U);
-            
-            //Now drive the resume K-state signalling onto the USB bus.
-            USBResumeControl = 1;       // Start RESUME signaling
-            do_delay(1800U);        // Set RESUME line for 1-13 ms
-            USBResumeControl = 0;       //Finished driving resume signalling
-
-            USBUnmaskInterrupts();
-        }
-    }
-}
-
-
 /*******************************************************************
  * Function:        BOOL USER_USB_CALLBACK_EVENT_HANDLER(
  *                        USB_EVENT event, void *pdata, WORD size)
@@ -466,10 +416,3 @@ BOOL USER_USB_CALLBACK_EVENT_HANDLER(int event, void *pdata, WORD size)
     return TRUE; 
 }
 
-static void do_delay(WORD delay_count)
-{
-    do
-    {
-        delay_count--;
-    }while(delay_count);
-}
