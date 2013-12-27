@@ -72,23 +72,11 @@ static BOOL msTick = FALSE;
 extern BYTE usercode(BYTE) @ 0x1000;
 #endif
 
-void interrupt ISRCode()
+void interrupt ISRCode(void)
 {
-    /*
-    Microchip's ever varying nomenclature is as follows:
-    the goto (no return address pushed onto stack) is called "ljmp" ( *LONG* jump )
-    but the call (return address pushed onto stack) is called "fcall" ( *FAR* call )
-    */
-    if (USERIMAGE == BootMode)
-    {
-        /* in USERIMAGE boot mode, the user's code will handle returning from the interrupt */
-        asm("ljmp 0x1004"); /* call user code interrupt vector */
-    }
-    else
-    {
-        /* in BOOTLOADER and HIDHYBRID boot modes, this is the complete interrupt handler */
-        USBDeviceTasks();
-    }
+#asm
+LJMP 0x1004 /* call user code interrupt vector */
+#endasm
 }
 
 int main(void)
@@ -212,6 +200,8 @@ int main(void)
 
     for (;;)
     {
+        USBDeviceTasks(); // polling method of USB library
+
         // User Application USB tasks
         if( (USBDeviceState < CONFIGURED_STATE) || (1 == USBSuspendControl) )
             continue;
