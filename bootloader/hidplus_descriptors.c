@@ -45,7 +45,7 @@ ROM USB_DEVICE_DESCRIPTOR hid_bootloader_device_dsc=
     0x00,                   // Class Code
     0x00,                   // Subclass code
     0x00,                   // Protocol code
-    USB_EP0_BUFF_SIZE,          // Max packet size for EP0, see usb_config.h
+    USB_EP0_BUFF_SIZE,      // Max packet size for EP0, see usb_config.h
     0x04D8,                 // Vendor ID
     0x003F,                 // Product ID: Custom HID device demo
     0x0002,                 // Device release number in BCD format
@@ -65,7 +65,7 @@ ROM USB_DEVICE_DESCRIPTOR hid_cypher_device_dsc=
     0x00,                   // Class Code
     0x00,                   // Subclass code
     0x00,                   // Protocol code
-    USB_EP0_BUFF_SIZE,          // Max packet size for EP0, see usb_config.h
+    USB_EP0_BUFF_SIZE,      // Max packet size for EP0, see usb_config.h
     0x04D8,                 // Vendor ID
     0x003F,                 // Product ID: Custom HID device demo
     0x0002,                 // Device release number in BCD format
@@ -86,7 +86,7 @@ ROM BYTE configDescriptor1[]=
     1,                      // Number of interfaces in this cfg
     1,                      // Index value of this configuration
     0,                      // Configuration string index
-    _DEFAULT | _SELF,               // Attributes, see usb_device.h
+    _DEFAULT,               // Attributes, see usb_device.h
     50,                     // Max power consumption (2X mA)
 							
     /* Interface Descriptor */
