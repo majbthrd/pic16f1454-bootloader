@@ -23,7 +23,6 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-//#include <stdint.h>
 #include <FL/Fl.H>
 #include <FL/Fl_Button.H>
 #include <FL/Fl_File_Chooser.H>
@@ -126,7 +125,6 @@ static void hex_button_cb(Fl_Widget *p, void *data)
 						}
 						else
 						{
-printf("%x\n", address);
 							flags.out_of_bounds = 1;
 						}
 						address++;
@@ -226,8 +224,6 @@ static void flash_button_cb(Fl_Widget *p, void *data)
 		return;
 	}
 
-	memset(buf, 0, sizeof(buf));
-
 	for (address = 0; address < 0x2000; )
 	{
 		index = (address + 0x2000) >> 1;
@@ -302,8 +298,8 @@ static int xfer(hid_device *handle, unsigned char *data, int txlen)
 	}
 
 	/* get reply */
-//	retval = hid_read_timeout(handle, data, HID_BUFFER_SIZE, 1000);
-	retval = hid_read(handle, data, HID_BUFFER_SIZE);
+	retval = hid_read_timeout(handle, data, HID_BUFFER_SIZE, 1000);
+
 	if (retval == -1 || retval == 0)
 	{
 		return -1;

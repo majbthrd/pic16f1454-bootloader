@@ -1,0 +1,20 @@
+# replace the following paths with those suitable for your Windows machine
+CFLAGS += -Ic:/foo/fltk-1.3.2/ -Lc:/foo/fltk-1.3.2/lib 
+
+CFLAGS += -DWIN32
+CFLAGS += -mwindows -lfltk -lole32 -luuid -lcomctl32
+CFLAGS += -lsetupapi
+CFLAGS += -static-libgcc -static-libstdc++
+
+# DOWNLOAD_C = download.cpp hid-libusb.o
+DOWNLOAD_C = download.cpp hid.o
+
+all: download.exe
+
+download.exe: Makefile $(DOWNLOAD_C)
+	g++ $(DOWNLOAD_C) -Os -o $@ $(CFLAGS) -L.
+	strip $@
+
+clean:
+	rm -f download.exe
+
