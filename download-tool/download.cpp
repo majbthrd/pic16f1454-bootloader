@@ -23,7 +23,7 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-#include <stdint.h>
+//#include <stdint.h>
 #include <FL/Fl.H>
 #include <FL/Fl_Button.H>
 #include <FL/Fl_File_Chooser.H>
@@ -50,7 +50,7 @@ static Fl_Progress *progress;
 static Fl_Button *hex_button, *flash_button;
 static Fl_File_Chooser *fc;
 
-static uint8_t image[8192];
+static unsigned char image[8192];
 
 int main (int argc, char *argv[])
 {
@@ -126,6 +126,7 @@ static void hex_button_cb(Fl_Widget *p, void *data)
 						}
 						else
 						{
+printf("%x\n", address);
 							flags.out_of_bounds = 1;
 						}
 						address++;
@@ -173,6 +174,10 @@ static void hex_button_cb(Fl_Widget *p, void *data)
 		}
 	}
 
+#if 0
+	crc ^= 0x3FFF; /* for HIDHYBRID code images */
+#endif
+
 	image[0x1FFF] = (unsigned char)((crc & 0xFF00) >> 8);
 	image[0x1FFE] = (unsigned char)((crc & 0x00FF) >> 0);
 
@@ -207,6 +212,12 @@ static void flash_button_cb(Fl_Widget *p, void *data)
 	unsigned index, address, count;
 	int res = 0;
 
+	if (hid_init() != 0)
+	{
+		fl_alert("unable to open HIDAPI");
+		return;
+	}
+
 	handle = hid_open(0x04D8, 0x003F, NULL);
 
 	if (!handle)
@@ -214,6 +225,8 @@ static void flash_button_cb(Fl_Widget *p, void *data)
 		fl_alert("a USB device with the bootloader was not to be found");
 		return;
 	}
+
+	memset(buf, 0, sizeof(buf));
 
 	for (address = 0; address < 0x2000; )
 	{
@@ -224,7 +237,7 @@ static void flash_button_cb(Fl_Widget *p, void *data)
 		buf[2] = (unsigned char)((index & 0xFF00) >> 8);
 		buf[3] = (unsigned char)((index & 0x00FF) >> 0);
 
-		res = xfer(handle, buf, 4 + 32);
+		res = xfer(handle, buf, HID_BUFFER_SIZE);
 
 		if (-1 == res)
 			break;
@@ -241,7 +254,7 @@ static void flash_button_cb(Fl_Widget *p, void *data)
 			address += 2;
 		}
 
-		res = xfer(handle, buf, 4 + 32);
+		res = xfer(handle, buf, HID_BUFFER_SIZE);
 
 		if (-1 == res)
 			break;
@@ -260,17 +273,21 @@ static void flash_button_cb(Fl_Widget *p, void *data)
 			address += 2;
 		}
 
-		res = xfer(handle, buf, 4 + 32);
+		res = xfer(handle, buf, HID_BUFFER_SIZE);
 
 		if (-1 == res)
 			break;
-
 	}
 
 	if (-1 == res)
 		fl_alert("programming was NOT successful");
 	else
+	{
 		fl_alert("programming was successful!\ndisconnect and reconnect device to boot new code");
+	}
+
+	hid_close(handle);
+	hid_exit();
 }
 
 /* Send a message and receive the reply */
@@ -285,7 +302,8 @@ static int xfer(hid_device *handle, unsigned char *data, int txlen)
 	}
 
 	/* get reply */
-	retval = hid_read_timeout(handle, data, HID_BUFFER_SIZE, 1000);
+//	retval = hid_read_timeout(handle, data, HID_BUFFER_SIZE, 1000);
+	retval = hid_read(handle, data, HID_BUFFER_SIZE);
 	if (retval == -1 || retval == 0)
 	{
 		return -1;

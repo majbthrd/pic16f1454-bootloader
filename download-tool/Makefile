@@ -1,14 +1,17 @@
-CFLAGS = -fstack-protector -fstack-protector-all
-CFLAGS += $(shell fltk-config --cxxflags --ldflags)
+DOWNLOAD_CFLAGS  = -fstack-protector -fstack-protector-all
+DOWNLOAD_CFLAGS += $(shell fltk-config --cxxflags --ldflags)
+DOWNLOAD_CFLAGS +=-ludev `pkg-config libusb-1.0 --libs`
 
-LIBS=-ludev `pkg-config libusb-1.0 --libs`
-
-DOWNLOAD_C = download.cpp hid-libusb.o
+HIDAPI_CFLAGS += `pkg-config libusb-1.0 --cflags`
+HIDAPI_CFLAGS += `pkg-config libusb-1.0 libudev --libs`
 
 all: download
 
-download: Makefile $(DOWNLOAD_C)
-	g++ $(DOWNLOAD_C) $(LIBS) -Os -o $@ $(CFLAGS) -L.
+hid-libusb.o: hid.c
+	gcc -c hid.c -o $@ $(HIDAPI_CFLAGS) -L.
+
+download: Makefile download.cpp hid-libusb.o
+	g++ download.cpp hid-libusb.o -Os -o $@ $(DOWNLOAD_CFLAGS) -L.
 	strip $@
 
 clean:
