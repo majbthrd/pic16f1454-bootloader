@@ -1,0 +1,11 @@
+--- /home/phl/microchip/usb_function_hid.c	2014-01-22 10:55:48.680279685 -0700
++++ usb_function_hid.c	2014-01-11 14:30:22.000000000 -0700
+@@ -190,7 +190,7 @@ void USBCheckHIDRequest(void)
+                 if(USBActiveConfiguration == 1)
+                 {
+                     USBEP0SendROMPtr(
+-                        (ROM BYTE*)&configDescriptor1 + 18,		//18 is a magic number.  It is the offset from start of the configuration descriptor to the start of the HID descriptor.
++                        (ROM BYTE*)&configDescriptor1 + 18,		// magic number is the offset from start of the configuration descriptor to the start of the HID descriptor.
+                         sizeof(USB_HID_DSC)+3,
+                         USB_EP0_INCLUDE_ZERO);
+                 }

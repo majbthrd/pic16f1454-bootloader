@@ -1,7 +1,7 @@
 /*
-    USB HID bootloader for PIC16F1454/PIC16F1455/PIC16F1459 microcontroller
+    USB HID bootloader plus CDC for PIC16F1454/PIC16F1455/PIC16F1459 microcontroller
 
-    Copyright (C) 2013 Peter Lawrence
+    Copyright (C) 2013,2014 Peter Lawrence
 
     Permission is hereby granted, free of charge, to any person obtaining a 
     copy of this software and associated documentation files (the "Software"), 
@@ -27,49 +27,56 @@
 
 #include "./USB/usb.h"
 #include "./USB/usb_function_hid.h"
+#ifdef ADD_CDC
+#include "./USB/usb_function_cdc.h"
+#endif
 
 /* state of configuration words */
-__CONFIG(FOSC_INTOSC & WDTE_OFF & PWRTE_ON & MCLRE_OFF & CP_ON & BOREN_ON & CLKOUTEN_OFF & IESO_OFF & FCMEN_OFF);
+__CONFIG(FOSC_INTOSC & WDTE_SWDTEN & PWRTE_ON & MCLRE_OFF & CP_ON & BOREN_ON & CLKOUTEN_OFF & IESO_OFF & FCMEN_OFF);
 __CONFIG(WRT_HALF & CPUDIV_NOCLKDIV & USBLSCLK_48MHz & PLLMULT_3x & PLLEN_ENABLED & STVREN_ON & BORV_LO & LPBOR_OFF & LVP_OFF);
 
-/* USB data buffers (which are also available to the user code when in HIDHYBRID boot mode) */
-unsigned char RxDataBuffer[64] @0xA0;
-unsigned char TxDataBuffer[64] @0x120;
+/* UART bps of 115200 */
+#pragma config IDLOC0 = 103
+#pragma config IDLOC1 = 0
+
+/* local data buffers for HID functionality */
+unsigned char RxDataBuffer[HID_INT_EP_SIZE] @0xA0;
+unsigned char TxDataBuffer[HID_INT_EP_SIZE] @0x120;
+
+#ifdef ADD_CDC
+/* CDC variables used by CDC stack... declared here so that they are visible, rather than latent in the stack code */
+volatile FAR CDC_NOTICE cdc_notice; 
+volatile FAR unsigned char cdc_data_rx[CDC_DATA_OUT_EP_SIZE]; 
+volatile FAR unsigned char cdc_data_tx[CDC_DATA_IN_EP_SIZE]; 
+LINE_CODING line_coding;
+
+/* local data buffers for CDC functionality */
+char PC2PIC_Buffer[CDC_DATA_OUT_EP_SIZE];
+char PIC2PC_Buffer[CDC_DATA_IN_EP_SIZE];
+#endif
 
 /* handles used for HID functionality */
-USB_HANDLE USBOutHandle;
-USB_HANDLE USBInHandle;
+USB_HANDLE USBHIDOutHandle;
+USB_HANDLE USBHIDInHandle;
 
 /* prototyping of external USB descriptors in ROM */
-extern ROM USB_DEVICE_DESCRIPTOR hid_bootloader_device_dsc;
-extern ROM BYTE *ROM HID_USB_CD_Ptr[];
-extern ROM BYTE *ROM HID_USB_SD_Bootloader_Ptr[];
-#ifndef OMIT_HIDHYBRID
-extern ROM USB_DEVICE_DESCRIPTOR hid_cypher_device_dsc;
-extern ROM BYTE *ROM HID_USB_SD_Cypher_Ptr[];
-#endif
+extern ROM USB_DEVICE_DESCRIPTOR bootloader_device_dsc;
+extern ROM BYTE *ROM CDC_USB_CD_Ptr[];
+extern ROM BYTE *ROM CDC_USB_SD_Ptr[];
 
 /* pointers that pick one of the above external USB descriptors */
 USB_DEVICE_DESCRIPTOR const *pnt_device_dsc;
 const BYTE const **USB_CD_Ptr;
 const BYTE const **USB_SD_Ptr;
 
-/* variable storing boot mode (which determines the code's behavior) */
-static enum
-{
-    BOOTLOADER,
-    USERIMAGE,
-#ifndef OMIT_HIDHYBRID
-    HIDHYBRID
-#endif
-} BootMode = BOOTLOADER;
+#ifdef ADD_CDC
+/* variables to track positions and occupancy in local CDC buffers */
+unsigned char PIC2PC_pending_count;
+unsigned char PC2PIC_buffer_occupancy;
+unsigned char PC2PIC_read_index;
 
-#ifndef OMIT_HIDHYBRID
-/* flag from USER_USB_CALLBACK_EVENT_HANDLER() to main loop */
-static BOOL msTick = FALSE;
-
-/* XC8 syntax approach to optionally call (not goto) HIDHYBRID user code */
-extern BYTE usercode(BYTE) @ 0x1000;
+/* prototyping of USART functions */
+void InitializeUSART(void);
 #endif
 
 void interrupt ISRCode(void)
@@ -79,11 +86,16 @@ LJMP 0x1004 /* call user code interrupt vector */
 #endasm
 }
 
+/* bit field defintions for "flags" variable in main() */
+#define FLAG_USERCODE        0x01
+#define FLAG_PC2PIC_DATA_RDY 0x02
+
 int main(void)
 {
     WORD crc, data;
     BYTE index, lo, hi;
     BYTE tx_count;
+    BYTE flags;
     
     /* enable pull-up on RA3 (for boot mode detection) */
     OPTION_REGbits.nWPUEN = FALSE;
@@ -98,6 +110,8 @@ int main(void)
     pull-up on RA3 needs a moment to do its thing
     so, now is a good time to spend time computing a CRC of the user-programmable area
     */
+
+    flags = 0;
 
     /* initialize CRC */
     crc = 0;
@@ -150,11 +164,7 @@ int main(void)
     if (PORTAbits.RA3)
     {
         if (data == crc)
-            BootMode = USERIMAGE;
-#ifndef OMIT_HIDHYBRID
-        else if ((data ^ 0x3FFF) == crc)
-            BootMode = HIDHYBRID;
-#endif
+            flags |= FLAG_USERCODE;
     }
 
     /* disable pull-up now that determination has been made */
@@ -162,41 +172,42 @@ int main(void)
     WPUA = 0;
 
     /* if not in bootloader mode, branch to user code (for initialization or outright different USB code) */
-    if (USERIMAGE == BootMode)
+    if (flags & FLAG_USERCODE)
     {
         /*
         in USERIMAGE boot mode, we goto ("LONG jump") the user's code with no expectation of returning
-        doing a call would function, but would waste one entry on the stack
+        doing a call would also function, but would waste one entry on the stack
         */
         asm("ljmp 0x1000"); /* call user code reset vector */
     }
-#ifndef OMIT_HIDHYBRID
-    else if (HIDHYBRID == BootMode)
-    {
-        /*
-        in HIDHYBRID mode, we expect the user-provided code to return
-        */
-        usercode(2);
-    }
+
+    /* pick which descriptors to use; in this application, there is another one choice */
+    pnt_device_dsc = &bootloader_device_dsc;
+    USB_CD_Ptr = (const BYTE const **)CDC_USB_CD_Ptr;
+    USB_SD_Ptr = (const BYTE const **)CDC_USB_SD_Ptr;
+
+#ifdef ADD_CDC
+    InitializeUSART();
 #endif
 
-    /* choose USB descriptor based on BootMode */
-    pnt_device_dsc = &hid_bootloader_device_dsc;
-    USB_CD_Ptr = (const BYTE const **)HID_USB_CD_Ptr;
-    USB_SD_Ptr = (const BYTE const **)HID_USB_SD_Bootloader_Ptr;
-#ifndef OMIT_HIDHYBRID
-    if (HIDHYBRID == BootMode)
-    {
-        pnt_device_dsc = &hid_cypher_device_dsc;
-        USB_SD_Ptr = (const BYTE const **)HID_USB_SD_Cypher_Ptr;
-    }
+    /*
+    initialize the USB driver
+    */
+
+#ifdef ADD_CDC
+    PIC2PC_pending_count = 0;
+    PC2PIC_buffer_occupancy = 0;
 #endif
 
-    /* initialize the USB driver */
-    USBOutHandle = 0;
-    USBInHandle = 0;
+    USBHIDOutHandle = 0;
+    USBHIDInHandle = 0;
+
     USBDeviceInit();
     USBDeviceAttach();
+
+    /*
+    commence main loop
+    */
 
     for (;;)
     {
@@ -207,7 +218,7 @@ int main(void)
             continue;
 
         //Check if we have received an OUT data packet from the host
-        if (!HIDRxHandleBusy(USBOutHandle))
+        if (!HIDRxHandleBusy(USBHIDOutHandle))
         {
             /*
             if tx_count is set to be non-zero by subsequent code, this indicates data
@@ -215,15 +226,11 @@ int main(void)
             */
             tx_count = 0;
 
-            if (!HIDTxHandleBusy(USBInHandle))
+            if (!HIDTxHandleBusy(USBHIDInHandle))
             {
                 /*
-                if the code has reached here, the BootMode is either BOOTLOADER or HIDHYBRID
-                here we branch accordingly (either calling bootloader code or the user's code)
+                parse incoming HID packet and generate response
                 */
-#ifndef OMIT_HIDHYBRID
-                if (BOOTLOADER == BootMode)
-#endif
                 {
                     TxDataBuffer[tx_count++] = RxDataBuffer[0];
                     TxDataBuffer[tx_count++] = RxDataBuffer[1];
@@ -232,16 +239,18 @@ int main(void)
                     hi = RxDataBuffer[1];
                     lo = RxDataBuffer[2];
 
+                    /* clear CFGS for accessing Program Memory; set accessing Configuration Memory */
+       	            PMCON1bits.CFGS = (RxDataBuffer[0] & 0x04) ? TRUE : FALSE;
+
                     switch (RxDataBuffer[0])
                     {
                     case 0x80:  /* Read Memory */
+                    case 0x84:  /* Read Config */
                         do
                         {
                             /* set starting Program Memory address */
                             PMADRH = hi;
                             PMADRL = lo;
-                            /* clear CFGS (we're reading Program, not Configuration, Memory) */
-                            PMCON1bits.CFGS = FALSE;
                             /* set RD (initiate read) */
                             PMCON1bits.RD = TRUE;
                             /* mandatory two nops */
@@ -257,10 +266,7 @@ int main(void)
                         break;
 
                     case 0x81:  /* Erase Memory */
-                        /* disable global interrupts */
-                        INTCONbits.GIE = FALSE;
-                        /* clear CFGS (we're reading Program, not Configuration, Memory) */
-                        PMCON1bits.CFGS = FALSE;
+                    case 0x85:  /* Erase Config */
                         /* provide Program Memory row address */
                         PMADRH = hi;
                         PMADRL = lo;
@@ -276,15 +282,10 @@ int main(void)
                         _nop(); _nop();
                         /* disable write/erase operation */
                         PMCON1bits.WREN = FALSE;
-                        /* re-enable global interrupts */
-                        INTCONbits.GIE = TRUE;
                         break;
 
                     case 0x82:  /* Program Memory */
-                        /* disable global interrupts */
-                        INTCONbits.GIE = FALSE;
-                        /* clear CFGS (we're reading Program, not Configuration, Memory) */
-                        PMCON1bits.CFGS = FALSE;
+                    case 0x86:  /* Program Config */
                         /* provide Program Memory row address */
                         PMADRH = hi;
                         PMADRL = lo;
@@ -301,7 +302,7 @@ int main(void)
                         {
                             PMDATH = RxDataBuffer[index++];
                             PMDATL = RxDataBuffer[index++];
-                            if (index >= (32 + 3))
+                            if ( (index >= (32 + 3)) || PMCON1bits.CFGS )
                             {
                                 /* write latches to flash */
                                 PMCON1bits.LWLO = FALSE;
@@ -312,7 +313,7 @@ int main(void)
                             PMCON1bits.WR = TRUE;
                             /* mandatory two nops */
                             _nop(); _nop();
-                            if (index >= (32 + 3))
+                            if ( (index >= (32 + 3)) || PMCON1bits.CFGS )
                             {
                                 /* we've finished, so bail */
                                 break;
@@ -325,84 +326,143 @@ int main(void)
                         }
                         /* disable write/erase operation */
                         PMCON1bits.WREN = FALSE;
-                        /* re-enable global interrupts */
-                        INTCONbits.GIE = TRUE;
                         break;
                     }
                 }
-#ifndef OMIT_HIDHYBRID
-                else
-                {
-                    /* call user-provided HIDHYBRID boot mode code */
-                    tx_count = usercode(0);
-                }
-#endif
             }
 
             if (tx_count)
-                USBInHandle = HIDTxPacket(HID_EP, (BYTE*)&TxDataBuffer[0], tx_count);
+                USBHIDInHandle = HIDTxPacket(HID_EP, (BYTE*)&TxDataBuffer[0], HID_INT_EP_SIZE);
 
             /* Re-arm the OUT endpoint */
-            USBOutHandle = HIDRxPacket(HID_EP, (BYTE*)&RxDataBuffer, 64);
+            USBHIDOutHandle = HIDRxPacket(HID_EP, (BYTE*)&RxDataBuffer, HID_INT_EP_SIZE);
         }
 
-#ifndef OMIT_HIDHYBRID
-        if (msTick)
-        {
-            if (HIDHYBRID == BootMode)
-            {
-                usercode(1);
-            }
-            msTick = FALSE;
-        }
+#ifdef ADD_CDC
+	/* if our PC2PIC buffer is empty, try to re-fill it */
+	if (0 == (flags & FLAG_PC2PIC_DATA_RDY))
+	{
+		PC2PIC_buffer_occupancy = getsUSBUSART(PC2PIC_Buffer, sizeof(PC2PIC_Buffer));
+		if(PC2PIC_buffer_occupancy > 0)
+		{
+			/* signal that the buffer is not empty */
+			flags |= FLAG_PC2PIC_DATA_RDY;
+			/* rewind read index to the beginning of the buffer */
+			PC2PIC_read_index = 0;
+		}
+	}
+
+	/* if our PC2PIC buffer is not empty *AND* the USART can accept another byte, transmit another byte */
+	if ((flags & FLAG_PC2PIC_DATA_RDY) && TXSTAbits.TRMT)
+	{
+		/* disable tri-state on TX transmit pin */
+	        TRISCbits.TRISC4 = 0;
+		/* transmit another byte from buffer */
+		TXREG = PC2PIC_Buffer[PC2PIC_read_index];
+		/* update the read index */
+    		++PC2PIC_read_index;
+		/* if the read_index has reached the occupancy value, signal that the buffer is empty again */
+    		if (PC2PIC_read_index == PC2PIC_buffer_occupancy)
+    			flags &= ~FLAG_PC2PIC_DATA_RDY;	    
+	}
+
+	/* if the USART has received another byte, add it to the queue if there is room */
+	if (PIR1bits.RCIF && (PIC2PC_pending_count < (CDC_DATA_OUT_EP_SIZE - 1)))
+	{
+		if (RCSTAbits.OERR)
+			RCSTAbits.CREN = 0;  /* in case of overrun error, reset the port */
+		PIC2PC_Buffer[PIC2PC_pending_count] = RCREG;
+		RCSTAbits.CREN = 1;  /* and then (re-)enable receive */
+		++PIC2PC_pending_count;
+	}
+
+	/* if we have PIC2PC data to send and the USB stack can accept it, we hand it over */
+	if ((USBUSARTIsTxTrfReady()) && (PIC2PC_pending_count > 0))
+	{
+		putUSBUSART(&PIC2PC_Buffer[0], PIC2PC_pending_count);
+		PIC2PC_pending_count = 0;
+	}
+
+        CDCTxService();
 #endif
     }
 }
 
-/*******************************************************************
- * Function:        BOOL USER_USB_CALLBACK_EVENT_HANDLER(
- *                        USB_EVENT event, void *pdata, WORD size)
- *
- * PreCondition:    None
- *
- * Input:           USB_EVENT event - the type of event
- *                  void *pdata - pointer to the event data
- *                  WORD size - size of the event data
- *
- * Output:          None
- *
- * Side Effects:    None
- *
- * Overview:        This function is called from the USB stack to
- *                  notify a user application that a USB event
- *                  occured.  This callback is in interrupt context
- *                  when the USB_INTERRUPT option is selected.
- *
- * Note:            None
- *******************************************************************/
 BOOL USER_USB_CALLBACK_EVENT_HANDLER(int event, void *pdata, WORD size)
 {
     /*
     if-statement, rather than switch(), is used here as Microchip's compiler can be very inefficient with switch()
     */
-    if (EVENT_SOF == event)
+    if (EVENT_CONFIGURED == event)
     {
-#ifndef OMIT_HIDHYBRID
-        /* flag main loop to service millisecond tick */
-        msTick = TRUE;
+#ifdef ADD_CDC
+	/*
+	for CDC
+	*/
+        CDCInitEP();
 #endif
-    }
-    else if (EVENT_CONFIGURED == event)
-    {
-        //enable the HID endpoint
+
+	/*
+	for HID
+	*/
+        /* enable the HID endpoint */
         USBEnableEndpoint(HID_EP, USB_IN_ENABLED | USB_OUT_ENABLED | USB_HANDSHAKE_ENABLED | USB_DISALLOW_SETUP);
-        //Re-arm the OUT endpoint for the next packet
-        USBOutHandle = HIDRxPacket(HID_EP,(BYTE*)&RxDataBuffer,64);
+        /* Re-arm the OUT endpoint for the next packet */
+        USBHIDOutHandle = HIDRxPacket(HID_EP, (BYTE*)&RxDataBuffer, HID_INT_EP_SIZE);
     }
     else if (EVENT_EP0_REQUEST == event)
     {
+#ifdef ADD_CDC
+	/*
+	for CDC
+	*/
+        USBCheckCDCRequest();
+#endif
+	/*
+	for HID
+	*/
         USBCheckHIDRequest();
     }
     return TRUE; 
 }
 
+#ifdef ADD_CDC
+void InitializeUSART(void)
+{
+	/* RX on RC5 is input */
+        TRISCbits.TRISC5 = 1;
+
+	/*
+	TX on RC4 would be an output, but we tri-state it at boot;
+	that way, we avoid actively driving it until necessary
+	*/
+        TRISCbits.TRISC4 = 1;
+
+        TXSTA = 0x24;
+        RCSTA = 0x90;
+
+        /*
+	load user-defined UART rate
+	*/
+	
+	PMCON1bits.CFGS = TRUE; /* read config, not program, memory */
+	PMADRH = 0;
+	PMADRL = 0;
+	PMCON1bits.RD = TRUE;
+	/* mandatory two nops */
+	_nop(); _nop();
+	/* store result in baud rate registers */
+        SPBRG = PMDATL;
+        SPBRGH = PMDATH;
+
+        BAUDCON = 0x08;
+
+	/* clear any data in receive buffer */
+        (volatile void)RCREG;
+}
+
+void mySetLineCodingHandler(void)
+{
+        CDCSetBaudRate(cdc_notice.GetLineCoding.dwDTERate.Val);
+}
+#endif
