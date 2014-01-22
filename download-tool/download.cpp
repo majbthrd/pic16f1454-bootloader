@@ -2,7 +2,7 @@
     multi-platform GUI Download tool for
     HID bootloader for PIC16F1454/PIC16F1455/PIC16F1459 microcontroller
 
-    Copyright (C) 2013 Peter Lawrence
+    Copyright (C) 2013,2014 Peter Lawrence
 
     Permission is hereby granted, free of charge, to any person obtaining a 
     copy of this software and associated documentation files (the "Software"), 
@@ -50,6 +50,11 @@ static Fl_Button *hex_button, *flash_button;
 static Fl_File_Chooser *fc;
 
 static unsigned char image[8192];
+
+static const unsigned char erased_state[32] = {
+	0x3F, 0xFF, 0x3F, 0xFF, 0x3F, 0xFF, 0x3F, 0xFF, 0x3F, 0xFF, 0x3F, 0xFF, 0x3F, 0xFF, 0x3F, 0xFF, 
+	0x3F, 0xFF, 0x3F, 0xFF, 0x3F, 0xFF, 0x3F, 0xFF, 0x3F, 0xFF, 0x3F, 0xFF, 0x3F, 0xFF, 0x3F, 0xFF, 
+};
 
 int main (int argc, char *argv[])
 {
@@ -172,10 +177,6 @@ static void hex_button_cb(Fl_Widget *p, void *data)
 		}
 	}
 
-#if 0
-	crc ^= 0x3FFF; /* for HIDHYBRID code images */
-#endif
-
 	image[0x1FFF] = (unsigned char)((crc & 0xFF00) >> 8);
 	image[0x1FFE] = (unsigned char)((crc & 0x00FF) >> 0);
 
@@ -209,6 +210,7 @@ static void flash_button_cb(Fl_Widget *p, void *data)
 	hid_device *handle;
 	unsigned index, address, count;
 	int res = 0;
+	const char *caption = NULL;
 
 	if (hid_init() != 0)
 	{
@@ -216,12 +218,35 @@ static void flash_button_cb(Fl_Widget *p, void *data)
 		return;
 	}
 
-	handle = hid_open(0x04D8, 0x003F, NULL);
+	/*
+	IMPORTANT!
+	replace with VID:PID of your application
+	*/
+	handle = hid_open(0x04D8, 0x5A5A, NULL);
 
 	if (!handle)
 	{
-		fl_alert("a USB device with the bootloader was not to be found");
-		return;
+		caption = "a USB device with the bootloader's VID:PID was not to be found";
+		goto bail; 
+	}
+
+	buf[0] = 0x00;
+	buf[1] = 0x84; /* read config */
+	buf[2] = 0x00;
+	buf[3] = 0x00;
+
+	res = xfer(handle, buf, HID_BUFFER_SIZE);
+
+	if (-1 == res)
+	{
+		caption = "unable to read PIC's Device ID";
+		goto bail;
+	}
+
+	if ( (0x10 != buf[13]) || (0x05 != buf[14]) )
+	{
+		caption = "the PIC's Device ID is invalid";
+		goto bail;
 	}
 
 	for (address = 0; address < 0x2000; )
@@ -236,7 +261,29 @@ static void flash_button_cb(Fl_Widget *p, void *data)
 		res = xfer(handle, buf, HID_BUFFER_SIZE);
 
 		if (-1 == res)
-			break;
+		{
+			caption = "failure whilst attempting erase";
+			goto bail;
+		}
+
+		buf[0] = 0x00;
+		buf[1] = 0x80; /* read memory */
+		buf[2] = (unsigned char)((index & 0xFF00) >> 8);
+		buf[3] = (unsigned char)((index & 0x00FF) >> 0);
+
+		res = xfer(handle, buf, HID_BUFFER_SIZE);
+
+		if (-1 == res)
+		{
+			caption = "failure whilst attempting erase verify";
+			goto bail;
+		}
+
+		if (memcmp(buf + 3, erased_state, sizeof(erased_state)))
+		{
+			caption = "part did not erase properly";
+			goto bail;
+		}
 
 		buf[0] = 0x00;
 		buf[1] = 0x82; /* program memory */
@@ -253,7 +300,10 @@ static void flash_button_cb(Fl_Widget *p, void *data)
 		res = xfer(handle, buf, HID_BUFFER_SIZE);
 
 		if (-1 == res)
-			break;
+		{
+			caption = "failure whilst attempting programming lower half";
+			goto bail;
+		}
 
 		index += 16;
 
@@ -272,15 +322,17 @@ static void flash_button_cb(Fl_Widget *p, void *data)
 		res = xfer(handle, buf, HID_BUFFER_SIZE);
 
 		if (-1 == res)
-			break;
+		{
+			caption = "failure whilst attempting programming upper half";
+			goto bail;
+		}
 	}
 
-	if (-1 == res)
-		fl_alert("programming was NOT successful");
-	else
-	{
-		fl_alert("programming was successful!\ndisconnect and reconnect device to boot new code");
-	}
+	caption = "programming was successful!\ndisconnect and reconnect device to boot new code";
+
+bail:
+	if (caption)
+		fl_alert("%s", caption);
 
 	hid_close(handle);
 	hid_exit();
