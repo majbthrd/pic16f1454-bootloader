@@ -56,7 +56,8 @@ ROM USB_DEVICE_DESCRIPTOR device_dsc=
 };
 
 /* Configuration 1 Descriptor */
-ROM BYTE configDescriptor1[]={
+ROM BYTE configDescriptor1[]=
+{
     /* Configuration Descriptor */
     0x09,                         // Size of this descriptor in bytes
     USB_DESCRIPTOR_CONFIGURATION, // CONFIGURATION descriptor type
@@ -79,13 +80,13 @@ ROM BYTE configDescriptor1[]={
     0,                            // Interface string index
 
     /* HID Class-Specific Descriptor */
-    0x09,                         // Size of this descriptor in bytes RRoj hack
-    DSC_HID,                      // HID descriptor type
-    DESC_CONFIG_WORD(0x0111),     // HID Spec Release Number in BCD format (1.11)
-    0x00,                         // Country Code (0x00 for Not supported)
-    HID_NUM_OF_DSC,               // Number of class descriptors, see usbcfg.h
-    DSC_RPT,                      // Report descriptor type
-    DESC_CONFIG_WORD(50),         // Size of the report descriptor
+    0x09,                             // Size of this descriptor in bytes RRoj hack
+    DSC_HID,                          // HID descriptor type
+    DESC_CONFIG_WORD(0x0111),         // HID Spec Release Number in BCD format (1.11)
+    0x00,                             // Country Code (0x00 for Not supported)
+    HID_NUM_OF_DSC,                   // Number of class descriptors, see usbcfg.h
+    DSC_RPT,                          // Report descriptor type
+    DESC_CONFIG_WORD(HID_RPT01_SIZE), // Size of the report descriptor
     
     /* Endpoint Descriptor */
     0x07,

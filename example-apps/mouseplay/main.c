@@ -29,11 +29,8 @@
 #include "./USB/usb_function_hid.h"
 
 /* 
-state of configuration words
-NOTE: since this is a downloaded app, these settings are not utilized, as the bootloader determines these
+since this is a downloaded app, configuration words (e.g. __CONFIG or #pragma config) are not relevant
 */
-__CONFIG(FOSC_INTOSC & WDTE_SWDTEN & PWRTE_ON & MCLRE_OFF & CP_ON & BOREN_ON & CLKOUTEN_OFF & IESO_OFF & FCMEN_OFF);
-__CONFIG(WRT_HALF & CPUDIV_NOCLKDIV & USBLSCLK_48MHz & PLLMULT_3x & PLLEN_ENABLED & STVREN_ON & BORV_LO & LPBOR_OFF & LVP_OFF);
 
 /* USB data buffer (HID mouse has only "IN" (device to PC) report) */
 unsigned char hid_report_in[HID_INT_IN_EP_SIZE] @0xA0;
