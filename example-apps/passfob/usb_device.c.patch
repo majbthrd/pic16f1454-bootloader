@@ -1,0 +1,16 @@
+257c257
+< #include "../USB/usb_device_local.h"
+---
+> #include "./USB/usb_device_local.h"
+366c366
+< extern ROM BYTE *ROM USB_SD_Ptr[];
+---
+> extern const BYTE const **USB_SD_Ptr;
+2216c2216
+<                     inPipes[0].pSrc.bRom = (ROM BYTE*)&device_dsc;
+---
+>                     inPipes[0].pSrc.bRom = (ROM BYTE*)pnt_device_dsc;
+2220c2220
+<                 inPipes[0].wCount.Val = sizeof(device_dsc);
+---
+>                 inPipes[0].wCount.Val = sizeof(USB_DEVICE_DESCRIPTOR);
