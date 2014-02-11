@@ -222,7 +222,7 @@ static void flash_button_cb(Fl_Widget *p, void *data)
 	IMPORTANT!
 	replace with VID:PID of your application
 	*/
-	handle = hid_open(0x04D8, 0x5A5A, NULL);
+	handle = hid_open(0x1D50, 0x609D, NULL);
 
 	if (!handle)
 	{
