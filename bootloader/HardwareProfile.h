@@ -29,7 +29,7 @@
 #define HP_H
 
 #define USE_INTERNAL_OSC
-#define self_power    1
+#define self_power    0
 #define USB_BUS_SENSE 1
 #define CLOCK_FREQ    48000000
 

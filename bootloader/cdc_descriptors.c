@@ -25,10 +25,6 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-/*
-    you MUST modify the USB descriptors and VID:PID below to suit your application
-*/
-
 /* 
 silly Microchip USB stack convention; C files should righfully NOT be coded this way
 "usb_function_hid.h" has an #ifdef that depends specifically on "__USB_DESCRIPTORS_C" to work
@@ -52,9 +48,9 @@ ROM USB_DEVICE_DESCRIPTOR bootloader_device_dsc=
     0x00,                   // Subclass code
     0x00,                   // Protocol code
     USB_EP0_BUFF_SIZE,      // Max packet size for EP0, see usb_config.h
-    0x04D8,                 // Vendor ID
-    0x5A5A,                 // Product ID
-    0x0100,                 // Device release number in BCD format
+    0x1D50,                 // Vendor ID
+    0x609D,                 // Product ID
+    0x0102,                 // Device release number in BCD format
     0x01,                   // Manufacturer string index
     0x02,                   // Product string index
     0x00,                   // Device serial number string index
@@ -67,10 +63,11 @@ ROM BYTE configDescriptor1[]={
     USB_DESCRIPTOR_CONFIGURATION,// CONFIGURATION descriptor type
 #ifdef ADD_CDC
     107,0,                  // Total length of data for this cfg
+    3,                      // Number of interfaces in this cfg
 #else
     41,0,                   // Total length of data for this cfg
+    1,                      // Number of interfaces in this cfg
 #endif
-    3,                      // Number of interfaces in this cfg
     1,                      // Index value of this configuration
     0,                      // Configuration string index
     _DEFAULT,               // Attributes, see usb_device.h
@@ -217,12 +214,12 @@ static ROM struct
 {
     BYTE bLength;
     BYTE bDscType;
-    WORD string[4];
+    WORD string[3];
 } sd001 =
 {
     sizeof(sd001),
     USB_DESCRIPTOR_STRING,
-    {'A','c','m','e'}
+    {'O','S','S'}
 };
 
 #ifdef ADD_CDC
