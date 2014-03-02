@@ -79,6 +79,14 @@ unsigned char PC2PIC_read_index;
 void InitializeUSART(void);
 #endif
 
+/*
+hidden away in Section 5.10.1.4 of the XC8 manual is disclosure that, by default, the STATUS bits are clobbered
+by using the --runtime=+resetbits argument to the XC8 compiler, the following additional symbols are defined
+*/
+extern unsigned char __resetbits;
+extern bit __powerdown;
+extern bit __timeout;
+
 void interrupt ISRCode(void)
 {
 #asm
@@ -163,7 +171,8 @@ int main(void)
     */
     if (PORTAbits.RA3)
     {
-        if (data == crc)
+        /* the XC8 symbol "__timeout" means *NOT timeout*... makes sense, right!? :( */
+        if ( (data == crc) && __timeout )
             flags |= FLAG_USERCODE;
     }
 

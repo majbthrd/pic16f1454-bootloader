@@ -1,5 +1,5 @@
 /*
-    example HID mouse using PIC16F1454 microcontroller
+    example HID keyboard using PIC16F1454 microcontroller
 
     Copyright (C) 2014 Peter Lawrence
 

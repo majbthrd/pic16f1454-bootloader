@@ -38,6 +38,11 @@ it also determines how long the button must be released in order to re-arm
 */
 #define MIN_TRIGGER_MS 750
 
+/*
+this determines which bit to monitor for the bootloader entry
+*/
+#define BOOTLOADER_ENTRY_KEYLOCK_MASK 0x04 /* scroll-lock key */
+
 /* USB data buffers (HID keyboard has both "IN" (device to PC) and "OUT" (PC to device) reports) */
 unsigned char hid_report_in[HID_INT_IN_EP_SIZE] @0xA0;
 volatile unsigned char hid_report_out[HID_INT_OUT_EP_SIZE] @0x120;
@@ -72,6 +77,8 @@ int main(void)
 		ARMED,
 		TRANSMITTING,
 	} state = COOLDOWN;
+	unsigned short keylock_tick_count = 0;
+	BYTE last_keylock_state = 0;
 
 	/* enable pull-up on RA3 (for pushbutton detection) */
 	OPTION_REGbits.nWPUEN = FALSE;
@@ -114,6 +121,11 @@ int main(void)
 				}
 			}
 
+			/* if chosen KEYLOCK is now on, increment keylock_tick_count until it reaches 65535 */
+			if (last_keylock_state & BOOTLOADER_ENTRY_KEYLOCK_MASK)
+				if (0xFFFF != keylock_tick_count)
+					keylock_tick_count++;
+
 			ms_tick = FALSE;
 		}
 
@@ -147,9 +159,22 @@ int main(void)
 	        if (!HIDRxHandleBusy(USBOutHandle))
         	{
 			/*
-			presently, we are not going anything with the OUT report
-			However, one could potentially interpret NUM-LOCK/CAP-LOCK to initiate an action
+			we monitor KEYLOCK activity to provide a means to force the device back to the bootloader
+			reboot to bootloader *if* KEYLOCK turns on for a second (800 to 1200 milliseconds) and then goes back off
 			*/
+
+			if (hid_report_out[0] != last_keylock_state)
+			{
+				if ( (keylock_tick_count > 800) && (keylock_tick_count < 1200) )
+				{
+					/* enable watchdog; the code doesn't clear the watchdog, so it will eventually reset */
+					WDTCONbits.SWDTEN = 1;
+				}
+
+				keylock_tick_count = 0;
+
+				last_keylock_state = hid_report_out[0];
+			}
 
 			/* Re-arm the OUT endpoint */
 			USBOutHandle = HIDRxPacket(HID_EP, (BYTE*)&hid_report_out, sizeof(hid_report_out));
@@ -169,7 +194,7 @@ BOOL USER_USB_CALLBACK_EVENT_HANDLER(int event, void *pdata, WORD size)
 	else if (EVENT_CONFIGURED == event)
 	{
         	// enable the HID endpoint
-		USBEnableEndpoint(HID_EP, USB_IN_ENABLED | USB_HANDSHAKE_ENABLED | USB_DISALLOW_SETUP);
+		USBEnableEndpoint(HID_EP, USB_IN_ENABLED | USB_OUT_ENABLED | USB_HANDSHAKE_ENABLED | USB_DISALLOW_SETUP);
 		USBOutHandle = HIDRxPacket(HID_EP, (BYTE*)&hid_report_out, sizeof(hid_report_out));
 	}
 	else if (EVENT_EP0_REQUEST == event)

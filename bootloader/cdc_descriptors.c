@@ -52,7 +52,7 @@ ROM USB_DEVICE_DESCRIPTOR bootloader_device_dsc=
     0x609D,                 // Product ID
     0x0102,                 // Device release number in BCD format
     0x01,                   // Manufacturer string index
-    0x02,                   // Product string index
+    0x03,                   // Product string index
     0x00,                   // Device serial number string index
     0x01                    // Number of possible configurations
 };

@@ -12,7 +12,7 @@ CFLAGS = --chip=$(CHIP) -Q -G  --double=24 --float=24
 CFLAGS += --rom=default,-1000-1FFF 
 CFLAGS += --opt=default,+asm,-asmfile,+speed,-space,-debug --addrqual=ignore
 CFLAGS += --mode=pro -N64 -I. -I$(LIB_INC_PATH) --asmlist --summary=default,-psect,-class,+mem,-hex,-file --output=default,-inhx032 
-CFLAGS += --runtime=default,+clear,+init,-keep,-no_startup,+osccal,-resetbits,-download,-stackcall,+clib
+CFLAGS += --runtime=default,+clear,+init,-keep,-no_startup,+osccal,+resetbits,-download,-stackcall,+clib
 
 ifdef ADD_CDC
 CFLAGS += -DADD_CDC
