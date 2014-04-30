@@ -1,0 +1,3 @@
+# allow read/write access to PIC16F1454 bootloader ( https://code.google.com/p/pic16f1454-bootloader/ )
+KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="1d50", ATTRS{idProduct}=="609d", MODE="0666"
+
