@@ -204,6 +204,18 @@ static unsigned readhex(const char *text, unsigned digits)
 	return result;
 }
 
+/* these values are found in Section 4.7 of the datasheet (Microchip DS41639) */
+
+static const unsigned valid_device_ids[] =
+{
+	0x3020, /* PIC16F1454 */
+	0x3024, /* PIC16LF1454 */
+	0x3021, /* PIC16F1455 */
+	0x3025, /* PIC16LF1455 */
+	0x3023, /* PIC16F1459 */
+	0x3027, /* PIC16LF1459 */
+};
+
 static void flash_button_cb(Fl_Widget *p, void *data)
 {
 	unsigned char buf[HID_BUFFER_SIZE];
@@ -243,11 +255,23 @@ static void flash_button_cb(Fl_Widget *p, void *data)
 		goto bail;
 	}
 
-	if ( (0x10 != buf[13]) || (0x05 != buf[14]) )
+	/* extract the Device ID */
+	address = buf[15];
+	address <<= 8;
+	address += buf[16];
+
+	/* compare the Device ID against those known to be valid */
+	for (index = 0; index < (sizeof(valid_device_ids) / sizeof(*valid_device_ids)); index++)
 	{
-		caption = "the PIC's Device ID is invalid";
-		goto bail;
+		if (address == valid_device_ids[index])
+			goto device_id_is_valid;
 	}
+
+	/* if execution has reached here, the Device ID did not match a valid value */
+	caption = "the PIC's Device ID is invalid";
+	goto bail;
+
+device_id_is_valid:
 
 	for (address = 0; address < 0x2000; )
 	{

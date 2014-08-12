@@ -1,9 +1,10 @@
 DOWNLOAD_CFLAGS  = -fstack-protector -fstack-protector-all
-DOWNLOAD_CFLAGS += $(shell fltk-config --cxxflags --ldflags)
+DOWNLOAD_CFLAGS += $(shell fltk-config --cxxflags --ldstaticflags)
 DOWNLOAD_CFLAGS +=-ludev `pkg-config libusb-1.0 --libs`
 
 HIDAPI_CFLAGS += `pkg-config libusb-1.0 --cflags`
 HIDAPI_CFLAGS += `pkg-config libusb-1.0 libudev --libs`
+HIDAPI_CFLAGS += -m32
 
 all: download
 
