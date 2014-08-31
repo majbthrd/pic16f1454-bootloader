@@ -23,6 +23,12 @@
     DEALINGS IN THE SOFTWARE.
 */
 
+/*
+This tool leverages HIDAPI, a multi-platform library that allows 
+Windows, Linux, and MacOS applications to access HID devices
+http://www.signal11.us/oss/hidapi/
+*/
+
 #include <FL/Fl.H>
 #include <FL/Fl_Button.H>
 #include <FL/Fl_File_Chooser.H>
