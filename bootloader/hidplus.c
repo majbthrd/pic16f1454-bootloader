@@ -94,9 +94,10 @@ LJMP 0x1004 /* call user code interrupt vector */
 #endasm
 }
 
-/* bit field defintions for "flags" variable in main() */
+/* bit field definitions for "flags" variable in main() */
 #define FLAG_USERCODE        0x01
 #define FLAG_PC2PIC_DATA_RDY 0x02
+#define FLAG_PASSED_CRC      0x04
 
 int main(void)
 {
@@ -150,8 +151,17 @@ int main(void)
         if (0 == lo)
         {
             hi++;
+            if (data == crc)
+            {
+                /* we've reached a 256 word boundary *and* the CRC passes, so we note this */
+                /* we choose NOT to exit the loop here in order to have a consistent amount of time for the pull-up on RA3 */
+                flags |= FLAG_PASSED_CRC;
+            }
             if (0x20 == hi)
+            {
+                /* we've reached the last word */
                 break;
+            }
         }
         
         /* update CRC over the 14 bits of program memory data */
@@ -172,7 +182,7 @@ int main(void)
     if (PORTAbits.RA3)
     {
         /* the XC8 symbol "__timeout" means *NOT timeout*... makes sense, right!? :( */
-        if ( (data == crc) && __timeout )
+        if ( (flags & FLAG_PASSED_CRC) && __timeout )
             flags |= FLAG_USERCODE;
     }
 
@@ -339,6 +349,7 @@ int main(void)
                     }
                 }
             }
+
 
             if (tx_count)
                 USBHIDInHandle = HIDTxPacket(HID_EP, (BYTE*)&TxDataBuffer[0], HID_INT_EP_SIZE);

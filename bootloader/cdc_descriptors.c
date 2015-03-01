@@ -50,7 +50,7 @@ ROM USB_DEVICE_DESCRIPTOR bootloader_device_dsc=
     USB_EP0_BUFF_SIZE,      // Max packet size for EP0, see usb_config.h
     0x1D50,                 // Vendor ID
     0x609D,                 // Product ID
-    0x0102,                 // Device release number in BCD format
+    0x0104,                 // Device release number in BCD format
     0x01,                   // Manufacturer string index
     0x03,                   // Product string index
     0x00,                   // Device serial number string index
