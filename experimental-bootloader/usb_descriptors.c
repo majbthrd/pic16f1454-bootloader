@@ -67,8 +67,8 @@ const ROMPTR struct device_descriptor this_device_descriptor =
 	0x1D50, // Vendor
 	0x609D, // Product
 	0x0105, // device release (1.5)
-	1, // Manufacturer
-	2, // Product
+	0, // Manufacturer
+	1, // Product
 	0, // Serial
 	1, // NumConfigurations
 };
@@ -116,7 +116,7 @@ static const ROMPTR struct configuration_1_packet configuration_1 =
 	HID_INTERFACE_CLASS, // bInterfaceClass 3=HID, 0xFF=VendorDefined
 	0x00, // bInterfaceSubclass (0=NoBootInterface for HID)
 	0x00, // bInterfaceProtocol
-	0x0, // iInterface (index of string describing interface)
+	0x00, // iInterface (index of string describing interface)
 	},
 
 	{
@@ -158,13 +158,6 @@ static const ROMPTR struct {uint8_t bLength;uint8_t bDescriptorType; uint16_t la
 	0x0409 // US English
 };
 
-static const ROMPTR struct {uint8_t bLength;uint8_t bDescriptorType; uint16_t chars[3]; } vendor_string =
-{
-	sizeof(vendor_string),
-	DESC_STRING,
-	{'O','S','S'}
-};
-
 static const ROMPTR struct {uint8_t bLength;uint8_t bDescriptorType; uint16_t chars[10]; } product_string =
 {
 	sizeof(product_string),
@@ -179,11 +172,7 @@ int16_t usb_application_get_string(uint8_t string_number, const void **ptr)
 		*ptr = &str00;
 		return sizeof(str00);
 	}
-	else if (string_number == 1) { /* vendor */
-		*ptr = &vendor_string;
-		return sizeof(vendor_string);
-	}
-	else if (string_number == 2) { /* product */
+	else if (string_number == 1) { /* product */
 		*ptr = &product_string;
 		return sizeof(product_string);
 	}

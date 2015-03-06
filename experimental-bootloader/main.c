@@ -166,23 +166,20 @@ int main(void)
 
   TxDataBuffer = usb_get_in_buffer(1);
 
-   for (;;)
-   {
+  for (;;)
+  {
       usb_service();
 
       if (!usb_is_configured())
          continue;
 
-      if (!usb_out_endpoint_has_data(1))
-         continue;
-
       if (usb_in_endpoint_halted(1) || usb_in_endpoint_busy(1))
          continue;
 
-      len = usb_get_out_buffer(1, &RxDataBuffer);
-
-      if (len < 3)
+      if (!usb_out_endpoint_has_data(1))
          continue;
+
+      len = usb_get_out_buffer(1, &RxDataBuffer);
 
       /*
       if tx_count is set to be non-zero by subsequent code, this indicates data
@@ -291,8 +288,7 @@ int main(void)
           break;
       }
 
-      if (tx_count)
-        usb_send_in_buffer(1, tx_count);
+      usb_send_in_buffer(1, tx_count);
 
       usb_arm_out_endpoint(1);
    }
