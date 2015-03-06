@@ -288,7 +288,7 @@ int main(void)
           break;
       }
 
-      usb_send_in_buffer(1, tx_count);
+      usb_send_in_buffer(1, EP_1_IN_LEN);
 
       usb_arm_out_endpoint(1);
    }
