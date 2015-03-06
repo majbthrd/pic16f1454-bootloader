@@ -170,15 +170,22 @@ int main(void)
   {
       usb_service();
 
+      /* if USB isn't configured, there is no point in proceeding further */
       if (!usb_is_configured())
          continue;
 
+      /*
+      we check these *BEFORE* calling usb_out_endpoint_has_data() as the documentation indicates this 
+      must be followed usb_arm_out_endpoint() to enable reception of the next transaction
+      */
       if (usb_in_endpoint_halted(1) || usb_in_endpoint_busy(1))
          continue;
 
+      /* if we pass this test, we are committed to make the usb_arm_out_endpoint() call */
       if (!usb_out_endpoint_has_data(1))
          continue;
 
+      /* obtain a pointer to the receive buffer and the length of data contained within it */
       len = usb_get_out_buffer(1, &RxDataBuffer);
 
       /*
@@ -290,6 +297,7 @@ int main(void)
 
       usb_send_in_buffer(1, EP_1_IN_LEN);
 
+      /* re-arm the endpoint to receive the next EP1 OUT */
       usb_arm_out_endpoint(1);
    }
 }
