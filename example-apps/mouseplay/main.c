@@ -173,17 +173,6 @@ void app_usb_reset_callback(void)
 
 /* HID Callbacks. See usb_hid.h for documentation. */
 
-uint8_t app_get_idle_callback(uint8_t interface, uint8_t report_id)
-{
-	return 0;
-}
-
-int8_t app_set_idle_callback(uint8_t interface, uint8_t report_id,
-                             uint8_t idle_rate)
-{
-	return -1;
-}
-
 int8_t app_get_protocol_callback(uint8_t interface)
 {
 	return 1;
