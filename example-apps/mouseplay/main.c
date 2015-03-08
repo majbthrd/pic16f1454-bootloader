@@ -108,31 +108,6 @@ int main(void)
 }
 
 /* Callbacks. These function names are set in usb_config.h. */
-void app_set_configuration_callback(uint8_t configuration)
-{
-
-}
-
-uint16_t app_get_device_status_callback()
-{
-	return 0x0000;
-}
-
-void app_endpoint_halt_callback(uint8_t endpoint, bool halted)
-{
-
-}
-
-void app_out_transaction_callback(uint8_t endpoint)
-{
-
-}
-
-void app_in_transaction_complete_callback(uint8_t endpoint)
-{
-
-}
-
 int8_t app_unknown_setup_request_callback(const struct setup_packet *setup)
 {
 	/* To use the HID device class, have a handler for unknown setup
@@ -146,19 +121,9 @@ int8_t app_unknown_setup_request_callback(const struct setup_packet *setup)
 	return process_hid_setup_request(setup);
 }
 
-int16_t app_unknown_get_descriptor_callback(const struct setup_packet *pkt, const void **descriptor)
-{
-	return -1;
-}
-
 void app_start_of_frame_callback(void)
 {
 	tick_count++;
-}
-
-void app_usb_reset_callback(void)
-{
-
 }
 
 void interrupt isr()
