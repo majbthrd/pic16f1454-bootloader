@@ -173,44 +173,6 @@ void app_usb_reset_callback(void)
 
 /* HID Callbacks. See usb_hid.h for documentation. */
 
-static uint8_t report_buf[3];
-
-static void get_report_callback(bool transfer_ok, void *context)
-{
-	/* Nothing to do here really. It either succeeded or failed. If it
-	 * failed, the host will ask for it again. It's nice to be on the
-	 * device side in USB. */
-}
-
-int16_t app_get_report_callback(uint8_t interface, uint8_t report_type,
-                                uint8_t report_id, const void **report,
-                                usb_ep0_data_stage_callback *callback,
-                                void **context)
-{
-	/* This isn't a composite device, so there's no need to check the
-	 * interface here. Also, we know that there's only one report for
-	 * this device, so there's no need to check report_type or report_id.
-	 *
-	 * Set report, callback, and context; and the USB stack will send
-	 * the report, calling our callback (get_report_callback()) when
-	 * it has finished.
-	 */
-	*report = report_buf;
-	*callback = get_report_callback;
-	*context = NULL;
-	return sizeof(report_buf);
-}
-
-int8_t app_set_report_callback(uint8_t interface, uint8_t report_type,
-                               uint8_t report_id)
-{
-	/* To handle Set_Report, call usb_start_receive_ep0_data_stage()
-	 * here. See the documentation for HID_SET_REPORT_CALLBACK() in
-	 * usb_hid.h. For this device though, there are no output or
-	 * feature reports. */
-	return -1;
-}
-
 uint8_t app_get_idle_callback(uint8_t interface, uint8_t report_id)
 {
 	return 0;
