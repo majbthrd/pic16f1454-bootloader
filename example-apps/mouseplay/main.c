@@ -171,19 +171,6 @@ void app_usb_reset_callback(void)
 
 }
 
-/* HID Callbacks. See usb_hid.h for documentation. */
-
-int8_t app_get_protocol_callback(uint8_t interface)
-{
-	return 1;
-}
-
-int8_t app_set_protocol_callback(uint8_t interface, uint8_t report_id)
-{
-	return -1;
-}
-
-
 void interrupt isr()
 {
 #ifdef USB_USE_INTERRUPTS

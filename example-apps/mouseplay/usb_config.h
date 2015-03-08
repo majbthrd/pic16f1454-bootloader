@@ -91,7 +91,7 @@
 //#define HID_SET_REPORT_CALLBACK app_set_report_callback
 //#define HID_GET_IDLE_CALLBACK app_get_idle_callback
 //#define HID_SET_IDLE_CALLBACK app_set_idle_callback
-#define HID_GET_PROTOCOL_CALLBACK app_get_protocol_callback
-#define HID_SET_PROTOCOL_CALLBACK app_set_protocol_callback
+//#define HID_GET_PROTOCOL_CALLBACK app_get_protocol_callback
+//#define HID_SET_PROTOCOL_CALLBACK app_set_protocol_callback
 
 #endif /* USB_CONFIG_H__ */
