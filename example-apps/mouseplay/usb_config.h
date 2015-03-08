@@ -59,7 +59,7 @@
 /* Comment the following line to use polling USB operation. When using polling,
    You are responsible for calling usb_service() periodically from your
    application. */
-#define USB_USE_INTERRUPTS
+//#define USB_USE_INTERRUPTS
 
 /* Objects from usb_descriptors.c */
 #define USB_DEVICE_DESCRIPTOR this_device_descriptor
