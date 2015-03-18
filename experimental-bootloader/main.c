@@ -91,6 +91,33 @@ int main(void)
   lo = 0x00;
   hi = 0x10;
 
+  /*
+  There are at least three available approaches to the CRC check.  Each has its own drawbacks.
+
+  Option #1:
+  In the legacy mode (v1.02 and v1.03 bootloader), OPTION_PARTIAL_CRC is undefined
+  The CRC is placed at the very of the user code (0x1FFF).
+  The upside is that the CRC is strongest when it is evaluated at one location.
+  The downside is that there is no flash memory available for reprogramming by the user app.
+
+  Option #2:
+  The user could manually adjust the final address at which the for-loop below exits.
+  The CRC is placed at whatever address the user decides upon.
+  The upsides are that the CRC is at least as strong as Option #1 and there is flash memory set aside.
+  The downside is that the bootloader is now very specific to that one user and flash usage is fixed.
+
+  Option #3:
+  This is represented with the OPTION_PARTIAL_CRC #define.
+  The flash memory is divided into power-of-2 sized chunks, in this case quantity 16 of 256 words.
+  The user places the CRC in the last chunk occupied by the user code
+  The downside is that the CRC is slightly weaker (roughly one in 10^3 instead of 10^4 false positives).
+  The upside is that the flash usage can be varied on a user-by-user and app-by-app basis.
+  Option #1 is really a subset condition of Option #3.
+
+  If you are a user that wants Option #1, keep using the legacy v1.02 or v1.03 bootloaders.
+  If still you insist on compiling your own bootloader from this source code, don't enable Option #3.
+  */
+
   for (;;)
   {
     PMADRH = hi;
@@ -113,14 +140,21 @@ int main(void)
     if (0 == lo)
     {
       hi++;
+#ifdef OPTION_PARTIAL_CRC
       if (data == crc)
       {
         /* we've reached a 256 word boundary *and* the CRC passes, so we note this */
         /* we choose NOT to exit the loop here in order to have a consistent amount of time for the pull-up on RA3 */
         flags |= FLAG_PASSED_CRC;
       }
-      if (0x20 == hi)
+#endif
+      if (0x20 == hi) /* check if we've reached the final address */
       {
+#ifndef OPTION_PARTIAL_CRC
+        /* evaluate CRC only at the last word */
+        if (data == crc)
+          flags |= FLAG_PASSED_CRC;
+#endif
         /* we've reached the last word */
         break;
       }
