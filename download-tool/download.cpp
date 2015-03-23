@@ -2,7 +2,7 @@
     multi-platform GUI Download tool for
     HID bootloader for PIC16F1454/PIC16F1455/PIC16F1459 microcontroller
 
-    Copyright (C) 2013,2014 Peter Lawrence
+    Copyright (C) 2013,2014,2015 Peter Lawrence
 
     Permission is hereby granted, free of charge, to any person obtaining a 
     copy of this software and associated documentation files (the "Software"), 
@@ -75,6 +75,9 @@ int main (int argc, char *argv[])
 	flash_button->callback(flash_button_cb, NULL);
 	flash_button->deactivate();
 
+	progress = new Fl_Progress(MARGIN_SIZE, MARGIN_SIZE, PROGRESS_WIDTH, 2 * BUTTON_HEIGHT + MARGIN_SIZE);
+	progress->deactivate();
+ 
 	fc = new Fl_File_Chooser(".", "Intel Hex files (*.{hex})", Fl_File_Chooser::SINGLE, "pick PIC16F1454 firmware file");
 
 	win->end();
@@ -98,6 +101,7 @@ static void hex_button_cb(Fl_Widget *p, void *data)
 		unsigned extended:1;
 	} flags;
 	unsigned short word, crc;
+	unsigned local_address, max_address, crc_address;
 
 	flash_button->deactivate();
 
@@ -117,6 +121,8 @@ static void hex_button_cb(Fl_Widget *p, void *data)
 		return;
 	}
 
+	max_address = 0;
+
 	while (!feof(input))
 	{
 		if (fgets(line, sizeof(line), input))
@@ -132,7 +138,10 @@ static void hex_button_cb(Fl_Widget *p, void *data)
 					{
 						if ( (address >= 0x2000) && (address < 0x3FFE) )
 						{
-							image[address - 0x2000] = readhex(ptr, 2);
+							local_address = address - 0x2000;
+							image[local_address] = readhex(ptr, 2);
+							if (local_address > max_address)
+								max_address = local_address;
 						}
 						else
 						{
@@ -160,13 +169,19 @@ static void hex_button_cb(Fl_Widget *p, void *data)
 		if (2 != fl_choice("File contains data outside the bounds of the user-programmable area\nDo you wish to proceed despite this?", NULL, "No", "Yes"))
 			return;
 
+	progress->minimum(0.0);
+	progress->maximum(8192.0);
+	progress->value((float)max_address);
+
+	crc_address = 0x1FFE;
+
 	/*
 	compute USERCODE mode CRC
 	*/
 
 	crc = 0;
 
-	for (address = 0; address < 0x1FFE; address+=2)
+	for (address = 0; address < crc_address; address+=2)
 	{
 		word = image[address + 1];
 		word <<= 8;
@@ -183,8 +198,9 @@ static void hex_button_cb(Fl_Widget *p, void *data)
 		}
 	}
 
-	image[0x1FFF] = (unsigned char)((crc & 0xFF00) >> 8);
-	image[0x1FFE] = (unsigned char)((crc & 0x00FF) >> 0);
+	/* write CRC in the prescribed location */
+	image[crc_address + 1] = (unsigned char)((crc & 0xFF00) >> 8);
+	image[crc_address + 0] = (unsigned char)((crc & 0x00FF) >> 0);
 
 	flash_button->activate();
 }
