@@ -45,7 +45,6 @@ struct configuration_1_packet
 	struct interface_descriptor      interface;
 	struct hid_descriptor            hid;
 	struct endpoint_descriptor       ep;
-	struct endpoint_descriptor       ep1_out;
 };
 
 
