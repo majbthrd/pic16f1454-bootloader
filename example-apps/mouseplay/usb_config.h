@@ -47,18 +47,8 @@
 
 #define NUMBER_OF_CONFIGURATIONS 1
 
-/* Ping-pong buffering mode. Valid values are:
-	PPB_NONE         - Do not ping-pong any endpoints
-	PPB_EPO_OUT_ONLY - Ping-pong only endpoint 0 OUT
-	PPB_ALL          - Ping-pong all endpoints
-	PPB_EPN_ONLY     - Ping-pong all endpoints except 0
-*/
+#define PPB_MODE PPB_NONE /* Do not ping-pong any endpoints */
 
-#define PPB_MODE PPB_NONE
-
-/* Comment the following line to use polling USB operation. When using polling,
-   You are responsible for calling usb_service() periodically from your
-   application. */
 //#define USB_USE_INTERRUPTS
 
 /* Objects from usb_descriptors.c */
@@ -69,17 +59,17 @@
 /* Optional callbacks from usb.c. Leave them commented if you don't want to
    use them. For the prototypes and documentation for each one, see usb.h. */
 
-//#define SET_CONFIGURATION_CALLBACK app_set_configuration_callback
-//#define GET_DEVICE_STATUS_CALLBACK app_get_device_status_callback
-//#define ENDPOINT_HALT_CALLBACK     app_endpoint_halt_callback
-//#define SET_INTERFACE_CALLBACK     app_set_interface_callback
-//#define GET_INTERFACE_CALLBACK     app_get_interface_callback
-//#define OUT_TRANSACTION_CALLBACK   app_out_transaction_callback
-//#define IN_TRANSACTION_COMPLETE_CALLBACK   app_in_transaction_complete_callback
+#define SET_CONFIGURATION_CALLBACK app_set_configuration_callback
+#define GET_DEVICE_STATUS_CALLBACK app_get_device_status_callback
+#define ENDPOINT_HALT_CALLBACK     app_endpoint_halt_callback
+#define SET_INTERFACE_CALLBACK     app_set_interface_callback
+#define GET_INTERFACE_CALLBACK     app_get_interface_callback
+#define OUT_TRANSACTION_CALLBACK   app_out_transaction_callback
+#define IN_TRANSACTION_COMPLETE_CALLBACK   app_in_transaction_complete_callback
 #define UNKNOWN_SETUP_REQUEST_CALLBACK app_unknown_setup_request_callback
-//#define UNKNOWN_GET_DESCRIPTOR_CALLBACK app_unknown_get_descriptor_callback
+#define UNKNOWN_GET_DESCRIPTOR_CALLBACK app_unknown_get_descriptor_callback
 #define START_OF_FRAME_CALLBACK    app_start_of_frame_callback
-//#define USB_RESET_CALLBACK         app_usb_reset_callback
+#define USB_RESET_CALLBACK         app_usb_reset_callback
 
 /* HID Configuration functions. See usb_hid.h for documentation. */
 #define USB_HID_DESCRIPTOR_FUNC usb_application_get_hid_descriptor
@@ -87,11 +77,11 @@
 //#define USB_HID_PHYSICAL_DESCRIPTOR_FUNC usb_application_get_hid_physical_descriptor
 
 /* HID Callbacks. See usb_hid.h for documentation. */
-//#define HID_GET_REPORT_CALLBACK app_get_report_callback
-//#define HID_SET_REPORT_CALLBACK app_set_report_callback
-//#define HID_GET_IDLE_CALLBACK app_get_idle_callback
-//#define HID_SET_IDLE_CALLBACK app_set_idle_callback
-//#define HID_GET_PROTOCOL_CALLBACK app_get_protocol_callback
-//#define HID_SET_PROTOCOL_CALLBACK app_set_protocol_callback
+#define HID_GET_REPORT_CALLBACK app_get_report_callback
+#define HID_SET_REPORT_CALLBACK app_set_report_callback
+#define HID_GET_IDLE_CALLBACK app_get_idle_callback
+#define HID_SET_IDLE_CALLBACK app_set_idle_callback
+#define HID_GET_PROTOCOL_CALLBACK app_get_protocol_callback
+#define HID_SET_PROTOCOL_CALLBACK app_set_protocol_callback
 
 #endif /* USB_CONFIG_H__ */

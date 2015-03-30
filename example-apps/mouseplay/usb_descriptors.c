@@ -39,13 +39,15 @@
 #define ROMPTR
 #endif
 
-struct configuration_1_packet {
+struct configuration_1_packet
+{
 	struct configuration_descriptor  config;
 	struct interface_descriptor      interface;
 	struct hid_descriptor            hid;
 	struct endpoint_descriptor       ep;
 	struct endpoint_descriptor       ep1_out;
 };
+
 
 /* Device Descriptor */
 const ROMPTR struct device_descriptor this_device_descriptor =
@@ -59,7 +61,7 @@ const ROMPTR struct device_descriptor this_device_descriptor =
 	EP_0_LEN, // bMaxPacketSize0
 	0x04D8, // Vendor
 	0x0000, // Product
-	0x0003, // device release (1.0)
+	0x0001, // device release (1.0)
 	1, // Manufacturer
 	2, // Product
 	0, // Serial
@@ -69,31 +71,32 @@ const ROMPTR struct device_descriptor this_device_descriptor =
 /* HID Report descriptor */
 static const ROMPTR uint8_t mouse_report_descriptor[] =
 {
-        0x05, 0x01, /* Usage Page (Generic Desktop)             */
-        0x09, 0x02, /* Usage (Mouse)                            */
-        0xA1, 0x01, /* Collection (Application)                 */
-        0x09, 0x01, /*  Usage (Pointer)                         */
-        0xA1, 0x00, /*  Collection (Physical)                   */
-        0x05, 0x09, /*      Usage Page (Buttons)                */
-        0x19, 0x01, /*      Usage Minimum (01)                  */
-        0x29, 0x03, /*      Usage Maximum (03)                  */
-        0x15, 0x00, /*      Logical Minimum (0)                 */
-        0x25, 0x01, /*      Logical Maximum (1)                 */
-        0x95, 0x03, /*      Report Count (3)                    */
-        0x75, 0x01, /*      Report Size (1)                     */
-        0x81, 0x02, /*      Input (Data, Variable, Absolute)    */
-        0x95, 0x01, /*      Report Count (1)                    */
-        0x75, 0x05, /*      Report Size (5)                     */
-        0x81, 0x01, /*      Input (Constant)    ;5 bit padding  */
-        0x05, 0x01, /*      Usage Page (Generic Desktop)        */
-        0x09, 0x30, /*      Usage (X)                           */
-        0x09, 0x31, /*      Usage (Y)                           */
-        0x15, 0x81, /*      Logical Minimum (-127)              */
-        0x25, 0x7F, /*      Logical Maximum (127)               */
-        0x75, 0x08, /*      Report Size (8)                     */
-        0x95, 0x02, /*      Report Count (2)                    */
-        0x81, 0x06, /*      Input (Data, Variable, Relative)    */
-        0xC0, 0xC0
+	0x05, 0x01,    // USAGE_PAGE (Generic Desktop)
+	0x09, 0x02,    // USAGE (Mouse)
+	0xa1, 0x01,    // COLLECTION (Application)
+	0x09, 0x01,    //   USAGE (Pointer)
+	0xa1, 0x00,    //   COLLECTION (Physical)
+	0x05, 0x09,    //     USAGE_PAGE (Button)
+	0x19, 0x01,    //     USAGE_MINIMUM (Button 1)
+	0x29, 0x03,    //     USAGE_MAXIMUM (Button 3)
+	0x15, 0x00,    //     LOGICAL_MINIMUM (0)
+	0x25, 0x01,    //     LOGICAL_MAXIMUM (1)
+	0x95, 0x03,    //     REPORT_COUNT (3)
+	0x75, 0x01,    //     REPORT_SIZE (1)
+	0x81, 0x02,    //     INPUT (Data,Var,Abs)
+	0x95, 0x01,    //     REPORT_COUNT (1)
+	0x75, 0x05,    //     REPORT_SIZE (5)
+	0x81, 0x03,    //     INPUT (Cnst,Var,Abs)
+	0x05, 0x01,    //     USAGE_PAGE (Generic Desktop)
+	0x09, 0x30,    //     USAGE (X)
+	0x09, 0x31,    //     USAGE (Y)
+	0x15, 0x81,    //     LOGICAL_MINIMUM (-127)
+	0x25, 0x7f,    //     LOGICAL_MAXIMUM (127)
+	0x75, 0x08,    //     REPORT_SIZE (8)
+	0x95, 0x02,    //     REPORT_COUNT (2)
+	0x81, 0x06,    //     INPUT (Data,Var,Rel)
+	0xc0,          //   END_COLLECTION
+	0xc0           // END_COLLECTION
 };
 
 /* Configuration 1 Descriptor */
@@ -106,7 +109,7 @@ static const ROMPTR struct configuration_1_packet configuration_1 =
 	sizeof(configuration_1), // wTotalLength (length of the whole packet)
 	1, // bNumInterfaces
 	1, // bConfigurationValue
-	0, // iConfiguration (index of string descriptor)
+	2, // iConfiguration (index of string descriptor)
 	0b10000000,
 	100/2,   // 100/2 indicates 100mA
 	},
@@ -120,7 +123,7 @@ static const ROMPTR struct configuration_1_packet configuration_1 =
 	0x1, // bNumEndpoints (num besides endpoint 0)
 	HID_INTERFACE_CLASS, // bInterfaceClass 3=HID, 0xFF=VendorDefined
 	0x00, // bInterfaceSubclass (0=NoBootInterface for HID)
-	0x02, // bInterfaceProtocol (HID Protocol for Mouse)
+	0x00, // bInterfaceProtocol
 	0x00, // iInterface (index of string describing interface)
 	},
 
