@@ -1,73 +1,85 @@
-/*
-    example HID keyboard using PIC16F1454 microcontroller
+/*
+    example HID keyboard using PIC16F1454 microcontroller
+
+    originally written for Microchip USB Framework (aka MLA), but
+    now based on M-Stack by Alan Ott, Signal 11 Software
 
-    Copyright (C) 2014 Peter Lawrence
+    Copyright (C) 2014,2015 Peter Lawrence
+
+    Permission is hereby granted, free of charge, to any person obtaining a 
+    copy of this software and associated documentation files (the "Software"), 
+    to deal in the Software without restriction, including without limitation 
+    the rights to use, copy, modify, merge, publish, distribute, sublicense, 
+    and/or sell copies of the Software, and to permit persons to whom the 
+    Software is furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in 
+    all copies or substantial portions of the Software.
+
+    The software is for use solely and exclusively on Microchip PIC 
+    Microcontroller products. 
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL 
+    THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
+    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
+    DEALINGS IN THE SOFTWARE.
+*/
 
-    Permission is hereby granted, free of charge, to any person obtaining a 
-    copy of this software and associated documentation files (the "Software"), 
-    to deal in the Software without restriction, including without limitation 
-    the rights to use, copy, modify, merge, publish, distribute, sublicense, 
-    and/or sell copies of the Software, and to permit persons to whom the 
-    Software is furnished to do so, subject to the following conditions:
+#ifndef USB_CONFIG_H__
+#define USB_CONFIG_H__
 
-    The above copyright notice and this permission notice shall be included in 
-    all copies or substantial portions of the Software.
+/* Number of endpoint numbers besides endpoint zero. It's worth noting that
+   and endpoint NUMBER does not completely describe an endpoint, but the
+   along with the DIRECTION does (eg: EP 1 IN).  The #define below turns on
+   BOTH IN and OUT endpoints for endpoint numbers (besides zero) up to the
+   value specified.  For example, setting NUM_ENDPOINT_NUMBERS to 2 will
+   activate endpoints EP 1 IN, EP 1 OUT, EP 2 IN, EP 2 OUT.  */
+#define NUM_ENDPOINT_NUMBERS 1
 
-    The software is for use solely and exclusively on Microchip PIC 
-    Microcontroller products. 
+/* Only 8, 16, 32 and 64 are supported for endpoint zero length. */
+#define EP_0_LEN 8
 
-    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL 
-    THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
-    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
-    DEALINGS IN THE SOFTWARE.
-*/
+#define EP_1_OUT_LEN 8
+#define EP_1_IN_LEN  8
 
-#ifndef USBCFG_H
-#define USBCFG_H
+#define NUMBER_OF_CONFIGURATIONS 1
 
-#define USB_EP0_BUFF_SIZE	8
-#define USB_MAX_NUM_INT     	1
-#define USB_MAX_EP_NUMBER	1
+#define PPB_MODE PPB_NONE /* Do not ping-pong any endpoints */
 
-#define USB_USER_DEVICE_DESCRIPTOR &device_dsc
-#define USB_USER_DEVICE_DESCRIPTOR_INCLUDE extern ROM USB_DEVICE_DESCRIPTOR device_dsc
+/* Objects from usb_descriptors.c */
+#define USB_DEVICE_DESCRIPTOR this_device_descriptor
+#define USB_CONFIG_DESCRIPTOR_MAP usb_application_config_descs
+#define USB_STRING_DESCRIPTOR_FUNC usb_application_get_string
 
-#define USB_USER_CONFIG_DESCRIPTOR USB_CD_Ptr
-#define USB_USER_CONFIG_DESCRIPTOR_INCLUDE extern ROM BYTE *ROM USB_CD_Ptr[]
+/* Optional callbacks from usb.c. Leave them commented if you don't want to
+   use them. For the prototypes and documentation for each one, see usb.h. */
 
-#define USB_PING_PONG_MODE USB_PING_PONG__FULL_PING_PONG
+#define SET_CONFIGURATION_CALLBACK app_set_configuration_callback
+#define GET_DEVICE_STATUS_CALLBACK app_get_device_status_callback
+#define ENDPOINT_HALT_CALLBACK     app_endpoint_halt_callback
+#define SET_INTERFACE_CALLBACK     app_set_interface_callback
+#define GET_INTERFACE_CALLBACK     app_get_interface_callback
+#define OUT_TRANSACTION_CALLBACK   app_out_transaction_callback
+#define IN_TRANSACTION_COMPLETE_CALLBACK   app_in_transaction_complete_callback
+#define UNKNOWN_SETUP_REQUEST_CALLBACK app_unknown_setup_request_callback
+#define UNKNOWN_GET_DESCRIPTOR_CALLBACK app_unknown_get_descriptor_callback
+#define START_OF_FRAME_CALLBACK    app_start_of_frame_callback
+#define USB_RESET_CALLBACK         app_usb_reset_callback
 
-#define USB_POLLING
+/* HID Configuration functions. See usb_hid.h for documentation. */
+#define USB_HID_DESCRIPTOR_FUNC usb_application_get_hid_descriptor
+#define USB_HID_REPORT_DESCRIPTOR_FUNC usb_application_get_hid_report_descriptor
+//#define USB_HID_PHYSICAL_DESCRIPTOR_FUNC usb_application_get_hid_physical_descriptor
 
-#define USB_PULLUP_OPTION USB_PULLUP_ENABLE
+/* HID Callbacks. See usb_hid.h for documentation. */
+//#define HID_GET_REPORT_CALLBACK app_get_report_callback
+#define HID_SET_REPORT_CALLBACK app_set_report_callback
+#define HID_GET_IDLE_CALLBACK app_get_idle_callback
+#define HID_SET_IDLE_CALLBACK app_set_idle_callback
+#define HID_GET_PROTOCOL_CALLBACK app_get_protocol_callback
+#define HID_SET_PROTOCOL_CALLBACK app_set_protocol_callback
 
-#define USB_TRANSCEIVER_OPTION USB_INTERNAL_TRANSCEIVER
-
-#define USB_SPEED_OPTION USB_FULL_SPEED
-
-#define USB_ENABLE_STATUS_STAGE_TIMEOUTS
-
-#define USB_STATUS_STAGE_TIMEOUT     (BYTE) 45 /* ms */
-
-#define USB_SUPPORT_DEVICE
-
-#define USB_NUM_STRING_DESCRIPTORS 3
-
-#define USB_ENABLE_ALL_HANDLERS
-
-#define USB_USE_HID
-
-#define HID_INTF_ID             0x00
-#define HID_EP 			1
-#define HID_INT_OUT_EP_SIZE     1
-#define HID_INT_IN_EP_SIZE      8
-#define HID_NUM_OF_DSC          1
-#define HID_RPT01_SIZE          63
-
-#define MY_VID 0x04D8
-#define MY_PID 0x0055
-
-#endif //USBCFG_H
+#endif /* USB_CONFIG_H__ */
