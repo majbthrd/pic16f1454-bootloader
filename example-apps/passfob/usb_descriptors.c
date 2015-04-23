@@ -53,7 +53,7 @@ const ROMPTR struct device_descriptor this_device_descriptor =
 {
 	sizeof(struct device_descriptor), // bLength
 	DESC_DEVICE, // bDescriptorType
-	0x0200, // 0x0200 = USB 2.0, 0x0110 = USB 1.1
+	0x0111, // 0x0200 = USB 2.0, 0x0110 = USB 1.1
 	0x00, // Device class
 	0x00, // Device Subclass
 	0x00, // Protocol.
@@ -136,7 +136,7 @@ static const ROMPTR struct configuration_1_packet configuration_1 =
 	// Members from struct hid_descriptor
 	sizeof(struct hid_descriptor),
 	DESC_HID,
-	0x0101, // bcdHID
+	0x0110, // bcdHID
 	0x0, // bCountryCode
 	1,   // bNumDescriptors
 	DESC_REPORT, // bDescriptorType2
