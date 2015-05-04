@@ -46,11 +46,12 @@
 #define ROMPTR
 #endif
 
-struct configuration_1_packet {
+struct configuration_1_packet
+{
 	struct configuration_descriptor  config;
 	struct interface_descriptor      interface;
 	struct hid_descriptor            hid;
-	struct endpoint_descriptor       ep;
+	struct endpoint_descriptor       ep1_in;
 	struct endpoint_descriptor       ep1_out;
 };
 
@@ -66,15 +67,15 @@ const ROMPTR struct device_descriptor this_device_descriptor =
 	EP_0_LEN, // bMaxPacketSize0
 	0x1D50, // Vendor
 	0x609D, // Product
-	0x0105, // device release (1.5)
+	0x0200, // device release (2.0)
 	0, // Manufacturer
 	1, // Product
-	0, // Serial
+	2, // Serial
 	1, // NumConfigurations
 };
 
 /* HID Report descriptor. See the HID specification for more details. */
-static const ROMPTR uint8_t hid_report_descriptor[] =
+static const ROMPTR uint8_t hid_report_descriptor[] @ 0xD00 =
 {
         0x06, 0x00, 0xFF,       // Usage Page = 0xFF00 (Vendor Defined Page 1)
         0x09, 0x01,             // Usage (Vendor Usage 1)
@@ -92,7 +93,7 @@ static const ROMPTR uint8_t hid_report_descriptor[] =
         0xC0
 };
 
-static const ROMPTR struct configuration_1_packet configuration_1 =
+static const ROMPTR struct configuration_1_packet configuration_1 @ 0x800 =
 {
 	{
 	// Members from struct configuration_descriptor
@@ -151,30 +152,57 @@ static const ROMPTR struct configuration_1_packet configuration_1 =
 	},
 };
 
-static const ROMPTR struct {uint8_t bLength;uint8_t bDescriptorType; uint16_t lang; } str00 =
+static const ROMPTR struct { uint8_t bLength;uint8_t bDescriptorType; uint16_t lang; } str00 =
 {
 	sizeof(str00),
 	DESC_STRING,
 	0x0409 // US English
 };
 
-static const ROMPTR struct {uint8_t bLength;uint8_t bDescriptorType; uint16_t chars[10]; } product_string =
+static const ROMPTR struct { uint8_t bLength;uint8_t bDescriptorType; uint16_t chars[10]; } product_string =
 {
 	sizeof(product_string),
 	DESC_STRING,
 	{'b','o','o','t','l','o','a','d','e','r'}
 };
 
+static const ROMPTR struct { uint8_t bLength;uint8_t bDescriptorType; uint16_t chars[8]; } serialnumber_string @ 0xF80 =
+{
+	sizeof(serialnumber_string),
+	DESC_STRING,
+	{
+		/*
+		Microchip's SQTP program only allows eight instruction words to be modified.
+		So, infrequently update these four most significant hex digits (eight words) 
+		after exhausting the 2^16 of the four least significant digits
+		*/
+		'0','0','0','0',
+#if 1
+#warning Serial Number Descriptor is NOT VALID FOR FACTORY PRODUCTION
+		'0','0','0','0'
+#else
+		/* equivalent to RETLW 0xFF, as specified in "SQTP Specification for PIC16/17" */
+		0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF
+#endif
+	}
+};
 
 int16_t usb_application_get_string(uint8_t string_number, const void **ptr)
 {
-	if (string_number == 0) {
+	if (0 == string_number)
+        {
 		*ptr = &str00;
 		return sizeof(str00);
 	}
-	else if (string_number == 1) { /* product */
+	else if (1 == string_number)
+	{
 		*ptr = &product_string;
 		return sizeof(product_string);
+	}
+	else if (2 == string_number)
+	{
+		*ptr = &serialnumber_string;
+		return sizeof(serialnumber_string);
 	}
 
 	return -1;
@@ -203,3 +231,34 @@ int16_t usb_application_get_hid_report_descriptor(uint8_t interface, const void 
 	*ptr = hid_report_descriptor;
 	return sizeof(hid_report_descriptor);
 }
+
+struct bootloader_struct_type
+{
+	uint16_t ptr;
+	uint16_t size;
+};
+
+/*
+the Microchip XC8 compiler has a litany of limitations:
+
+1) only simple integers may be used for the "@" operator
+   so, the "@" value must be manually set to: 0x1000 - sizeof(bootloader_table)
+2) it errors out with "(712) can't generate code for this expression" unless 
+   the structs have fixed locations via "@", so using @ for anything cited below is mandatory
+*/
+
+/*
+The intention of this bootloader_table structure is to allow private data 
+structures made available in the bootloader to be found in an automated fashion.
+
+This discover can be achieved both by the user app and/or the host PC when 
+the device is in bootloader mode.
+*/
+
+const ROMPTR struct bootloader_struct_type bootloader_table[] @ 0xFF8 =
+{
+	{ 0, 0 },
+	{ 0x8000 | (uint16_t)&serialnumber_string, sizeof(serialnumber_string) },
+};
+
+STATIC_SIZE_CHECK_EQUAL(0x1000, (uint16_t)&bootloader_table + sizeof(bootloader_table));

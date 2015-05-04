@@ -1,7 +1,17 @@
 /*
-    USB HID bootloader plus CDC for PIC16F1454/PIC16F1455/PIC16F1459 microcontroller
+    this variant of code is based on:
 
-    Copyright (C) 2013,2014 Peter Lawrence
+    M-Stack USB Device Stack Implementation
+    Copyright (C) 2013 Alan Ott <alan@signal11.us>
+    Copyright (C) 2013 Signal 11 Software
+
+    rather than Microchip's USB Framework
+*/
+
+/*
+    USB HID bootloader for PIC16F1454/PIC16F1455/PIC16F1459 microcontroller
+
+    Copyright (C) 2013,2014,2015 Peter Lawrence
 
     Permission is hereby granted, free of charge, to any person obtaining a 
     copy of this software and associated documentation files (the "Software"), 
@@ -25,64 +35,43 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-#ifndef USBCFG_H
-#define USBCFG_H
+#ifndef USB_CONFIG_H__
+#define USB_CONFIG_H__
 
-#define USB_EP0_BUFF_SIZE	8
-#define USB_MAX_NUM_INT     	3
-#define USB_MAX_EP_NUMBER	3
+#define NUM_ENDPOINT_NUMBERS 1
 
-#define USB_USER_DEVICE_DESCRIPTOR pnt_device_dsc
-#define USB_USER_DEVICE_DESCRIPTOR_INCLUDE extern ROM USB_DEVICE_DESCRIPTOR *pnt_device_dsc
+/* Only 8, 16, 32 and 64 are supported for endpoint zero length. */
+#define EP_0_LEN 8
 
-#define USB_USER_CONFIG_DESCRIPTOR USB_CD_Ptr
-#define USB_USER_CONFIG_DESCRIPTOR_INCLUDE extern const BYTE const **USB_CD_Ptr
+#define EP_1_OUT_LEN 64
+#define EP_1_IN_LEN  64
 
+#define NUMBER_OF_CONFIGURATIONS 1
 
-#define USB_PING_PONG_MODE USB_PING_PONG__FULL_PING_PONG
+#define PPB_MODE PPB_NONE /* Do not ping-pong any endpoints */
 
-#define USB_POLLING
+/* Objects from usb_descriptors.c */
+#define USB_DEVICE_DESCRIPTOR this_device_descriptor
+#define USB_CONFIG_DESCRIPTOR_MAP usb_application_config_descs
+#define USB_STRING_DESCRIPTOR_FUNC usb_application_get_string
 
-#define USB_PULLUP_OPTION USB_PULLUP_ENABLE
+/* Optional callbacks from usb.c. */
 
-#define USB_TRANSCEIVER_OPTION USB_INTERNAL_TRANSCEIVER
+//#define SET_CONFIGURATION_CALLBACK app_set_configuration_callback
+#define GET_DEVICE_STATUS_CALLBACK app_get_device_status_callback
+//#define ENDPOINT_HALT_CALLBACK     app_endpoint_halt_callback
+#define SET_INTERFACE_CALLBACK     app_set_interface_callback
+#define GET_INTERFACE_CALLBACK     app_get_interface_callback
+//#define OUT_TRANSACTION_CALLBACK   app_out_transaction_callback
+//#define IN_TRANSACTION_COMPLETE_CALLBACK   app_in_transaction_complete_callback
+#define UNKNOWN_SETUP_REQUEST_CALLBACK app_unknown_setup_request_callback
+#define UNKNOWN_GET_DESCRIPTOR_CALLBACK app_unknown_get_descriptor_callback
+//#define START_OF_FRAME_CALLBACK    app_start_of_frame_callback
+//#define USB_RESET_CALLBACK         app_usb_reset_callback
 
-#define USB_SPEED_OPTION USB_FULL_SPEED
+/* HID Configuration functions. */
 
-#define USB_ENABLE_STATUS_STAGE_TIMEOUTS
+#define USB_HID_DESCRIPTOR_FUNC usb_application_get_hid_descriptor
+#define USB_HID_REPORT_DESCRIPTOR_FUNC usb_application_get_hid_report_descriptor
 
-#define USB_STATUS_STAGE_TIMEOUT     (BYTE) 45 /* ms */
-
-#define USB_SUPPORT_DEVICE
-
-#define USB_NUM_STRING_DESCRIPTORS 3
-
-#define USB_ENABLE_ALL_HANDLERS
-
-#define USB_USE_HID
-
-/* HID endpoints */
-#define HID_INTF_ID             0x00
-#define HID_EP 			1
-#define HID_INT_EP_SIZE         64
-#define HID_NUM_OF_DSC          1
-#define HID_RPT01_SIZE          28
-
-#ifdef ADD_CDC
-#define USB_USE_CDC
-
-/* CDC endpoints */
-#define CDC_COMM_INTF_ID        0x01
-#define CDC_COMM_EP             2
-#define CDC_COMM_IN_EP_SIZE     10
-
-#define CDC_DATA_INTF_ID        0x02
-#define CDC_DATA_EP             3
-#define CDC_DATA_OUT_EP_SIZE    64
-#define CDC_DATA_IN_EP_SIZE     64
-
-#define USB_CDC_SET_LINE_CODING_HANDLER mySetLineCodingHandler
-#define USB_CDC_SUPPORT_ABSTRACT_CONTROL_MANAGEMENT_CAPABILITIES_D1
-#endif
-
-#endif //USBCFG_H
+#endif /* USB_CONFIG_H__ */
