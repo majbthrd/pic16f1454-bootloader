@@ -8,10 +8,10 @@ HIDAPI_CFLAGS += `pkg-config libusb-1.0 libudev --libs`
 all: download
 
 hid-libusb.o: ./linux/hid-libusb.c
-	gcc -c ./linux/hid-libusb.c -o $@ $(HIDAPI_CFLAGS) -L.
+	gcc -c ./linux/hid-libusb.c -o $@ $(HIDAPI_CFLAGS) -I. -L.
 
 download: Makefile download.cpp hid-libusb.o
-	g++ download.cpp hid-libusb.o -Os -o $@ $(DOWNLOAD_CFLAGS) -L.
+	g++ download.cpp hid-libusb.o -Os -o $@ $(DOWNLOAD_CFLAGS) -I. -L.
 	strip $@
 
 clean:
