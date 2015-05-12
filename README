@@ -1,0 +1,6 @@
+The PIC16F1454 microcontroller is an aggressively priced (under $1.50 in single quantity and under $1.00 in larger quantities) USB-enabled microcontroller from Microchip. It is also able to discipline its internal RC oscillator using the USB interface, allowing the designer to forgo an external crystal (further enhancing the cost advantage over other vendors' microcontrollers).
+
+No example bootloader source code is provided by Microchip for this device family. I had to write my own, and this project shares that source code.
+
+The bootloader operates as a vendor-defined HID USB device, meaning it is compatible with multiple OSes and requires no drivers.
+
