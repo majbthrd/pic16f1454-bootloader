@@ -59,6 +59,13 @@
 	#pragma warning disable 1088
 #endif
 
+#ifdef __XC8
+	/* XC8 gives bogus warnings (at least on PIC18) about
+	 * ep0_data_stage_callback() being called when NULL. The code does
+	 * check for NULL, and is safe. */
+	#pragma warning disable 1471
+#endif
+
 #define MIN(x,y) (((x)<(y))?(x):(y))
 
 /* Even though they're the same, It's convenient below (for the buffer
@@ -481,6 +488,73 @@ static void reset_ep0_data_stage()
 #define SERIAL(x)
 #define SERIAL_VAL(x)
 
+/* Initialize or reset all of the endpoints. This is done:
+ *   1. at startup,
+ *   2. following a USB reset, and
+ *   3. whenever a SET_CONFIGURATION transfer is received. */
+static void init_endpoints(void)
+{
+	uint8_t i;
+
+	/* Hold ping-pong in reset for the whole time the endpoints
+	   are being configured */
+	SFR_USB_PING_PONG_RESET = 1;
+	/* Reset the flags */
+	ep0_buf.flags = 0;
+	for (i = 0; i <= NUM_ENDPOINT_NUMBERS; i++) {
+#ifdef PPB_EPn
+		ep_buf[i].flags = 0;
+#else
+		ep_buf[i].flags = EP_RX_DTS;
+#endif
+	}
+
+	/* Clear all the buffer-descriptors and re-initialize */
+	memset(bds, 0x0, sizeof(bds));
+
+	/* Setup endpoint 0 Output buffer descriptor.
+	   Input and output are from the HOST perspective. */
+	BDS0OUT(0).BDnADR = (BDNADR_TYPE) PHYS_ADDR(ep0_buf.out);
+	SET_BDN(BDS0OUT(0), BDNSTAT_UOWN, EP_0_LEN);
+
+#ifdef PPB_EP0_OUT
+	BDS0OUT(1).BDnADR = (BDNADR_TYPE) PHYS_ADDR(ep0_buf.out1);
+	SET_BDN(BDS0OUT(1), BDNSTAT_UOWN, EP_0_LEN);
+#endif
+
+	/* Setup endpoint 0 Input buffer descriptor.
+	   Input and output are from the HOST perspective. */
+	BDS0IN(0).BDnADR = (BDNADR_TYPE) PHYS_ADDR(ep0_buf.in);
+	SET_BDN(BDS0IN(0), 0, EP_0_LEN);
+#ifdef PPB_EP0_IN
+	BDS0IN(1).BDnADR = (BDNADR_TYPE) PHYS_ADDR(ep0_buf.in1);
+	SET_BDN(BDS0IN(1), 0, EP_0_LEN);
+#endif
+
+	for (i = 1; i <= NUM_ENDPOINT_NUMBERS; i++) {
+		/* Setup endpoint 1 Output buffer descriptor.
+		   Input and output are from the HOST perspective. */
+		BDSnOUT(i,0).BDnADR = (BDNADR_TYPE) PHYS_ADDR(ep_buf[i].out);
+		SET_BDN(BDSnOUT(i,0), BDNSTAT_UOWN|BDNSTAT_DTSEN, ep_buf[i].out_len);
+#ifdef PPB_EPn
+		/* Initialize EVEN buffers when in ping-pong mode. */
+		BDSnOUT(i,1).BDnADR = (BDNADR_TYPE) PHYS_ADDR(ep_buf[i].out1);
+		SET_BDN(BDSnOUT(i,1), BDNSTAT_UOWN|BDNSTAT_DTSEN|BDNSTAT_DTS, ep_buf[i].out_len);
+#endif
+		/* Setup endpoint 1 Input buffer descriptor.
+		   Input and output are from the HOST perspective. */
+		BDSnIN(i,0).BDnADR = (BDNADR_TYPE) PHYS_ADDR(ep_buf[i].in);
+		SET_BDN(BDSnIN(i,0), 0, ep_buf[i].in_len);
+#ifdef PPB_EPn
+		/* Initialize EVEN buffers when in ping-pong mode. */
+		BDSnIN(i,1).BDnADR = (BDNADR_TYPE) PHYS_ADDR(ep_buf[i].in1);
+		SET_BDN(BDSnIN(i,1), 0, ep_buf[i].in_len);
+#endif
+	}
+
+	SFR_USB_PING_PONG_RESET = 0;
+}
+
 /* usb_init() is called at powerup time, and when the device gets
    the reset signal from the USB bus (D+ and D- both held low) indicated
    by interrput bit URSTIF. */
@@ -595,57 +669,9 @@ void usb_init(void)
 	SFR_USB_ADDR = 0x0;
 	addr_pending = 0;
 	g_configuration = 0;
-	ep0_buf.flags = 0;
-	for (i = 0; i <= NUM_ENDPOINT_NUMBERS; i++) {
-#ifdef PPB_EPn
-		ep_buf[i].flags = 0;
-#else
-		ep_buf[i].flags = EP_RX_DTS;
-#endif
-	}
 
-	memset(bds, 0x0, sizeof(bds));
+	init_endpoints();
 
-	/* Setup endpoint 0 Output buffer descriptor.
-	   Input and output are from the HOST perspective. */
-	BDS0OUT(0).BDnADR = (BDNADR_TYPE) PHYS_ADDR(ep0_buf.out);
-	SET_BDN(BDS0OUT(0), BDNSTAT_UOWN, EP_0_LEN);
-
-#ifdef PPB_EP0_OUT
-	BDS0OUT(1).BDnADR = (BDNADR_TYPE) PHYS_ADDR(ep0_buf.out1);
-	SET_BDN(BDS0OUT(1), BDNSTAT_UOWN, EP_0_LEN);
-#endif
-
-	/* Setup endpoint 0 Input buffer descriptor.
-	   Input and output are from the HOST perspective. */
-	BDS0IN(0).BDnADR = (BDNADR_TYPE) PHYS_ADDR(ep0_buf.in);
-	SET_BDN(BDS0IN(0), 0, EP_0_LEN);
-#ifdef PPB_EP0_IN
-	BDS0IN(1).BDnADR = (BDNADR_TYPE) PHYS_ADDR(ep0_buf.in1);
-	SET_BDN(BDS0IN(1), 0, EP_0_LEN);
-#endif
-
-	for (i = 1; i <= NUM_ENDPOINT_NUMBERS; i++) {
-		/* Setup endpoint 1 Output buffer descriptor.
-		   Input and output are from the HOST perspective. */
-		BDSnOUT(i,0).BDnADR = (BDNADR_TYPE) PHYS_ADDR(ep_buf[i].out);
-		SET_BDN(BDSnOUT(i,0), BDNSTAT_UOWN|BDNSTAT_DTSEN, ep_buf[i].out_len);
-#ifdef PPB_EPn
-		/* Initialize EVEN buffers when in ping-pong mode. */
-		BDSnOUT(i,1).BDnADR = (BDNADR_TYPE) PHYS_ADDR(ep_buf[i].out1);
-		SET_BDN(BDSnOUT(i,1), BDNSTAT_UOWN|BDNSTAT_DTSEN|BDNSTAT_DTS, ep_buf[i].out_len);
-#endif
-		/* Setup endpoint 1 Input buffer descriptor.
-		   Input and output are from the HOST perspective. */
-		BDSnIN(i,0).BDnADR = (BDNADR_TYPE) PHYS_ADDR(ep_buf[i].in);
-		SET_BDN(BDSnIN(i,0), 0, ep_buf[i].in_len);
-#ifdef PPB_EPn
-		/* Initialize EVEN buffers when in ping-pong mode. */
-		BDSnIN(i,1).BDnADR = (BDNADR_TYPE) PHYS_ADDR(ep_buf[i].in1);
-		SET_BDN(BDSnIN(i,1), 0, ep_buf[i].in_len);
-#endif
-	}
-	
 	#ifdef USB_NEEDS_POWER_ON
 	SFR_USB_POWER = 1;
 	#endif
@@ -932,6 +958,13 @@ static inline int8_t handle_standard_control_request()
 #ifdef SET_CONFIGURATION_CALLBACK
 		SET_CONFIGURATION_CALLBACK(req);
 #endif
+		/* Re-initialize the endpoints. USB 2.0 section 9.1.1.5
+		 * requires that all endpoint data toggles be reset to DATA0
+		 * when SET_CONFIGURATION is received. With ping-ponging
+		 * involved, the only way to properly reset the data toggles
+		 * is to reset all the endpoints. */
+		init_endpoints();
+
 		send_zero_length_packet_ep0();
 		g_configuration = req;
 
@@ -1046,12 +1079,10 @@ static inline int8_t handle_standard_control_request()
 						/* Set Endpoint Halt Feature.
 						   Stall the affected endpoint. */
 						if (ep_dir) {
-							ep_buf[ep_num].flags |= EP_IN_HALT_FLAG;
-							stall_ep_in(ep_num);
+							usb_halt_ep_in(ep_num);
 						}
 						else {
-							ep_buf[ep_num].flags |= EP_OUT_HALT_FLAG;
-							stall_ep_out(ep_num);
+							usb_halt_ep_out(ep_num);
 						}
 					}
 					else {
@@ -1135,6 +1166,30 @@ static inline void handle_ep0_setup()
 	 * PIC16 or PIC18, so clear the stall explicitly. */
 	clear_ep0_stall();
 #endif
+
+	/* Receiving a Setup packet cancels any control transfer which was
+	 * in progress and thus invalidates any IN transactions which were
+	 * pending for a previous control transfer. Cancel any of these IN
+	 * transactions which were pending. */
+#ifdef PPB_EP0_OUT
+	/* For ping-pong mode on EP 0, note below that ppbi is the next
+	 * ping-pong buffer which would be written to, meaning that !ppbi is
+	 * the buffer which would have an IN transaction pending (if any).
+	 *
+	 * Only one ping-pong buffer is cleared (instead of both) because
+	 * M-Stack only puts one transfer at a time on the control IN endpoint.
+	 */
+	uint8_t ppbi = (ep0_buf.flags & EP_TX_PPBI)? 1: 0;
+	if (BDS0IN(!ppbi).STAT.UOWN) {
+		SET_BDN(BDS0IN(!ppbi), 0, EP_0_LEN);
+		ep0_buf.flags ^= EP_TX_PPBI;
+	}
+#else
+	if (BDS0IN(0).STAT.UOWN) {
+		SET_BDN(BDS0IN(0), 0, EP_0_LEN);
+	}
+#endif
+
 	if (ep0_data_stage_buf_remaining) {
 		/* A SETUP transaction has been received while waiting
 		 * for a DATA stage to complete; something is broken.
@@ -1339,7 +1394,11 @@ void usb_service(void)
 	}
 
 
+#ifdef USB_USE_INTERRUPTS
+	if (SFR_USB_TOKEN_IF && SFR_TRANSFER_IE) {
+#else
 	if (SFR_USB_TOKEN_IF) {
+#endif
 
 		//struct ustat_bits ustat = *((struct ustat_bits*)&USTAT);
 
@@ -1493,6 +1552,17 @@ bool usb_in_endpoint_busy(uint8_t endpoint)
 #endif
 }
 
+uint8_t usb_halt_ep_in(uint8_t ep)
+{
+	if (ep == 0 || ep > NUM_ENDPOINT_NUMBERS)
+		return -1;
+
+	ep_buf[ep].flags |= EP_IN_HALT_FLAG;
+	stall_ep_in(ep);
+
+	return 0;
+}
+
 bool usb_in_endpoint_halted(uint8_t endpoint)
 {
 	return ep_buf[endpoint].flags & EP_IN_HALT_FLAG;
@@ -1560,6 +1630,17 @@ void usb_arm_out_endpoint(uint8_t endpoint)
 
 }
 
+uint8_t usb_halt_ep_out(uint8_t ep)
+{
+	if (ep == 0 || ep > NUM_ENDPOINT_NUMBERS)
+		return -1;
+
+	ep_buf[ep].flags |= EP_OUT_HALT_FLAG;
+	stall_ep_out(ep);
+
+	return 0;
+}
+
 bool usb_out_endpoint_halted(uint8_t endpoint)
 {
 	return ep_buf[endpoint].flags & EP_OUT_HALT_FLAG;
@@ -1586,6 +1667,21 @@ void usb_send_data_stage(char *buffer, size_t len,
 	start_control_return(buffer, len, len);
 }
 
+/* Private Functions */
+
+#ifdef USB_USE_INTERRUPTS
+/* Manipulate the transaction (token) interrupt.  There is no stack or
+ * counter used to keep track of enable/disable calls, so care must be used
+ * to ensure that calls to these functions are not nested.  */
+void usb_disable_transaction_interrupt()
+{
+	SFR_TRANSFER_IE = 0;
+}
+void usb_enable_transaction_interrupt()
+{
+	SFR_TRANSFER_IE = 1;
+}
+#endif
 
 
 #ifdef USB_USE_INTERRUPTS
