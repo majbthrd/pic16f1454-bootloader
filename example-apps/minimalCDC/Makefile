@@ -11,7 +11,7 @@ CFLAGS += --opt=default,+asm,-asmfile,+speed,-space,-debug --addrqual=ignore
 CFLAGS += --mode=pro -N64 -I. -I$(LIB_INC_PATH) --warn=0 --asmlist --summary=default,-psect,-class,+mem,-hex,-file --output=default,-inhx032 
 CFLAGS += --runtime=default,+clear,+init,-keep,-no_startup,+osccal,-resetbits,-download,-stackcall,+clib
 
-CDCDEMO_OBJS = usb.p1 usb_cdc.p1 usb_descriptors.p1 main.p1
+CDCDEMO_OBJS = usb.p1 usb_cdc.p1 usb_descriptors.p1 main.p1 usb_helpers.p1
 
 CDCDEMO_HDRS = usb_config.h
 
