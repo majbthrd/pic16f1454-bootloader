@@ -44,13 +44,13 @@
 struct configuration_1_packet
 {
 	struct configuration_descriptor  config;
-	struct interface_association_descriptor iad;
 
 	/* CDC Class Interface */
 	struct interface_descriptor      cdc_class_interface;
 	struct cdc_functional_descriptor_header cdc_func_header;
 	struct cdc_acm_functional_descriptor cdc_acm;
 	struct cdc_union_functional_descriptor cdc_union;
+	struct cdc_union_functional_descriptor cdc_mgt;
 	struct endpoint_descriptor       cdc_ep;
 
 	/* CDC Data Interface */
@@ -66,14 +66,13 @@ const ROMPTR struct device_descriptor this_device_descriptor =
 	sizeof(struct device_descriptor), // bLength
 	DESC_DEVICE, // bDescriptorType
 	0x0200, // 0x0200 = USB 2.0, 0x0110 = USB 1.1
-	DEVICE_CLASS_MISC, // Device class
-	0x02, /* Device Subclass. See the document entitled: "USB Interface
-	         Association Descriptor Device Class Code and Use Model" */
-	0x01, // Protocol. See document referenced above.
+	CDC_DEVICE_CLASS, /* Device class */
+	0x00, /* Device Subclass. */
+	0x00, /* Protocol. */
 	EP_0_LEN, // bMaxPacketSize0
-	0xA0A0, // Vendor
-	0x0004, // Product
-	0x0001, // device release (0.1)
+	0x04D8, // Vendor
+	0x000A, // Product
+	0x0100, // device release (1.0)
 	0, // Manufacturer
 	0, // Product
 	0, // Serial
@@ -92,18 +91,6 @@ static const ROMPTR struct configuration_1_packet configuration_1 =
 	0, // iConfiguration (index of string descriptor)
 	0b10000000,
 	100/2,   // 100/2 indicates 100mA
-	},
-
-	/* Interface Association Descriptor */
-	{
-	sizeof(struct interface_association_descriptor),
-	DESC_INTERFACE_ASSOCIATION,
-	0, /* bFirstInterface */
-	2, /* bInterfaceCount */
-	CDC_COMMUNICATION_INTERFACE_CLASS,
-	CDC_COMMUNICATION_INTERFACE_CLASS_ACM_SUBCLASS,
-	0, /* bFunctionProtocol */
-	0, /* iFunction (string descriptor index) */
 	},
 
 	/* CDC Class Interface */
@@ -135,7 +122,7 @@ static const ROMPTR struct configuration_1_packet configuration_1 =
 	CDC_FUNCTIONAL_DESCRIPTOR_SUBTYPE_ACM,
 	/*
 	bmCapabilities:
-	  Linux honors no capabilities when said, but expects too much if any are advertised (so a value of zero is best)
+	  Linux honors 0 (no capabilities) when said, but expects too much if any are advertised (so a value of zero is best)
 	  Windows ignores what is said here and expects CDC_SET_LINE_CODING_CALLBACK (and CDC_GET_LINE_CODING_CALLBACK) anyway
 	*/
 	0,
@@ -146,8 +133,17 @@ static const ROMPTR struct configuration_1_packet configuration_1 =
 	sizeof (struct cdc_union_functional_descriptor),
 	DESC_CS_INTERFACE,
 	CDC_FUNCTIONAL_DESCRIPTOR_SUBTYPE_UNION,
-	0, /* bMasterInterface */
-	1, /* bSlaveInterface0 */
+	0, /* bMasterInterface: comm */
+	1, /* bSlaveInterface0: data */
+	},
+
+	/* CDC Management Functional Descriptor */
+	{
+	sizeof (struct cdc_union_functional_descriptor),
+	DESC_CS_INTERFACE,
+	CDC_FUNCTIONAL_DESCRIPTOR_SUBTYPE_MGT,
+	0, /* bMasterInterface: comm */
+	1, /* bSlaveInterface0: data */
 	},
 
 	/* CDC ACM Notification Endpoint (Endpoint 1 IN) */
@@ -174,16 +170,6 @@ static const ROMPTR struct configuration_1_packet configuration_1 =
 	0, // iInterface (index of string describing interface)
 	},
 
-	/* CDC Data IN Endpoint */
-	{
-	sizeof(struct endpoint_descriptor),
-	DESC_ENDPOINT,
-	0x02 | 0x80, // endpoint #2 0x80=IN
-	EP_BULK, // bmAttributes
-	EP_2_IN_LEN, // wMaxPacketSize
-	1, // bInterval in ms.
-	},
-
 	/* CDC Data OUT Endpoint */
 	{
 	sizeof(struct endpoint_descriptor),
@@ -191,7 +177,17 @@ static const ROMPTR struct configuration_1_packet configuration_1 =
 	0x02, // endpoint #2 0x00=OUT
 	EP_BULK, // bmAttributes
 	EP_2_OUT_LEN, // wMaxPacketSize
-	1, // bInterval in ms.
+	0, // bInterval in ms.
+	},
+
+	/* CDC Data IN Endpoint */
+	{
+	sizeof(struct endpoint_descriptor),
+	DESC_ENDPOINT,
+	0x02 | 0x80, // endpoint #2 0x80=IN
+	EP_BULK, // bmAttributes
+	EP_2_IN_LEN, // wMaxPacketSize
+	0, // bInterval in ms.
 	},
 };
 
