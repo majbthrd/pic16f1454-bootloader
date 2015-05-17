@@ -4,3 +4,5 @@ No example bootloader source code is provided by Microchip for this device famil
 
 The bootloader operates as a vendor-defined HID USB device, meaning it is compatible with multiple OSes and requires no drivers.
 
+This project now also includes several example USB applications written for the PIC16F1454; see "example-apps" directory and Wiki for details.
+
