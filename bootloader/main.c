@@ -153,8 +153,14 @@ int main(void)
 	*/
 	if (PORTAbits.RA3)
 	{
-		/* the XC8 symbol "__timeout" means *NOT timeout*... makes sense, right!? :( */
-		if ( (flags & FLAG_PASSED_CRC) && __timeout )
+		/*
+		in earlier (v1.21) versions of XC8:
+		the symbol "__timeout" means *NOT timeout*... makes sense, right!? :(
+		in later versions (v1.34) of XC8:
+		__timeout is always zero, so __resetbits (cached copy of STATUS) must be used
+		to obtain the /TO (timeout) flag... gee, thanks Microchip for a job well done
+		*/
+		if ( (flags & FLAG_PASSED_CRC) && (__resetbits & 0x10) )
 			flags |= FLAG_USERCODE;
 	}
 
