@@ -16,6 +16,7 @@
       <itemPath>../usb.c</itemPath>
       <itemPath>../usb_descriptors.c</itemPath>
       <itemPath>../usb_hid.c</itemPath>
+      <itemPath>../usb_helpers.c</itemPath>
     </logicalFolder>
     <logicalFolder name="ExternalFiles"
                    displayName="Important Files"
